@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>{% block title %}Universidad del Norte{% endblock %}</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet"/>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet"/>
+  <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet"/>
+  <style>
+    :root {
+      --uc-azul: #003366;
+      --uc-verde: #006633;
+      --uc-rojo-oscuro: #9F0100;
+      --uc-rojo-claro: #ff3010;
+      --uc-oro:  #CC9900;
+    }
+    body { background: #f4f6f9; font-family: 'Segoe UI', sans-serif; }
+    .sidebar {
+      height: 100vh;
+      background: var(--uc-azul);
+      color: #fff;
+      width: 240px;
+      position: fixed;
+      top: 0; left: 0;
+      z-index: 100;
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+      overflow-x: hidden;
+    }
+    .sidebar .brand {
+      padding: 1.2rem 1rem;
+      border-bottom: 1px solid rgba(255,255,255,.15);
+      font-size: 1.1rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: .5rem;
+    }
+    .sidebar .brand .badge-rol {
+      font-size: .65rem;
+      background: var(--uc-oro);
+      color: #000;
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+    .sidebar .nav-link {
+      color: rgba(255,255,255,.75);
+      padding: .6rem 1.2rem;
+      display: flex;
+      align-items: center;
+      gap: .6rem;
+      border-radius: 0;
+      transition: background .15s;
+    }
+    .sidebar .nav-link:hover,
+    .sidebar .nav-link.active {
+      background: rgba(255,255,255,.12);
+      color: #fff;
+    }
+    .sidebar .nav-section {
+      font-size: .7rem;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: rgba(255,255,255,.4);
+      padding: .8rem 1.2rem .2rem;
+    }
+    .sidebar .logout-area {
+      margin-top: auto;
+      border-top: 1px solid rgba(255,255,255,.1);
+      padding: .8rem;
+      flex-shrink: 0;
+    }
+    .main-content {
+      margin-left: 240px;
+      padding: 0;
+    }
+    .topbar {
+      background: #fff;
+      border-bottom: 1px solid #dee2e6;
+      padding: .75rem 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 99;
+    }
+    .page-body { padding: 1.5rem; }
+    .card { border: none; box-shadow: 0 1px 4px rgba(0,0,0,.08); border-radius: 10px; }
+    .card-header { border-radius: 10px 10px 0 0 !important; }
+    .btn-uc { background: var(--uc-azul); color: #fff; }
+    .btn-uc:hover { background: var(--uc-rojo-oscuro); color: #fff; }
+    .table-hover tbody tr:hover { background: #f0f4ff; }
+    .badge-admin { background: #ff3010; }
+    .badge-supervisor { background: #fd7e14; }
+    .badge-asistente { background: #198754; }
+    .toast-container { position: fixed; bottom: 1rem; right: 1rem; z-index: 2000; }
+    .spinner-overlay {
+      display: none;
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,.3);
+      z-index: 9999;
+      align-items: center;
+      justify-content: center;
+    }
+    .spinner-overlay.show { display: flex; }
+  </style>
+  {% block extra_css %}{% endblock %}
+</head>
+<body>
+
+{% if session.get('usuario_id') %}
+<!-- Sidebar -->
+<nav class="sidebar">
+  <div class="brand">
+    <img src="{{ url_for('static', filename='img/logo.png') }}" alt="Logo UDN" style="height: 40px; width: auto; object-fit: contain;">
+    <div>
+      <div>Universidad del Norte</div>
+      <div class="badge-rol">{{ session.get('usuario_rol','') }}</div>
+    </div>
+  </div>
+
+  <div class="nav-section">Principal</div>
+  <a href="/" class="nav-link {% if request.path=='/' %}active{% endif %}">
+    <i class="bi bi-speedometer2"></i> Dashboard
+  </a>
+
+  <div class="nav-section">Académico</div>
+  <a href="/paginas/programas" class="nav-link {% if '/programas' in request.path %}active{% endif %}">
+    <i class="bi bi-journal-bookmark"></i> Programas
+  </a>
+  <a href="/paginas/asignaturas" class="nav-link {% if '/asignaturas' in request.path %}active{% endif %}">
+    <i class="bi bi-book"></i> Asignaturas
+  </a>
+  <a href="/paginas/periodos" class="nav-link {% if '/periodos' in request.path %}active{% endif %}">
+    <i class="bi bi-calendar3"></i> Períodos
+  </a>
+
+  <div class="nav-section">Cobro</div>
+  <a href="/paginas/estudiantes" class="nav-link {% if '/estudiantes' in request.path %}active{% endif %}">
+    <i class="bi bi-people"></i> Estudiantes
+  </a>
+  <a href="/paginas/reglas" class="nav-link {% if '/reglas' in request.path %}active{% endif %}">
+    <i class="bi bi-currency-dollar"></i> Reglas Cobro
+  </a>
+  <a href="/paginas/codigos" class="nav-link {% if '/codigos' in request.path %}active{% endif %}">
+    <i class="bi bi-tags"></i> Cód. Detalle
+  </a>
+  <a href="/paginas/inscripciones" class="nav-link {% if '/inscripciones' in request.path %}active{% endif %}">
+    <i class="bi bi-clipboard-check"></i> Inscripciones
+  </a>
+
+  <div class="nav-section">Reportes</div>
+  <a href="/paginas/reportes" class="nav-link {% if '/reportes' in request.path %}active{% endif %}">
+    <i class="bi bi-bar-chart-line"></i> Reportes
+  </a>
+
+  {% if session.get('usuario_rol') == 'ADMINISTRADOR' %}
+  <div class="nav-section">Administración</div>
+  <a href="/paginas/usuarios" class="nav-link {% if '/usuarios' in request.path %}active{% endif %}">
+    <i class="bi bi-person-lock"></i> Usuarios
+  </a>
+  <a href="/paginas/roles" class="nav-link {% if '/roles' in request.path %}active{% endif %}">
+    <i class="bi bi-shield-check"></i> Roles
+  </a>
+  {% endif %}
+
+  <div class="logout-area">
+    <button onclick="logout()" class="btn btn-sm btn-outline-light w-100">
+      <i class="bi bi-box-arrow-left"></i> Cerrar sesión
+    </button>
+  </div>
+</nav>
+
+<!-- Main -->
+<div class="main-content">
+  <div class="topbar">
+    <h6 class="mb-0 fw-semibold">{% block page_title %}{% endblock %}</h6>
+    <div class="d-flex align-items-center gap-2">
+      <i class="bi bi-person-circle text-secondary"></i>
+      <span class="text-secondary small">{{ session.get('usuario_name','') }}</span>
+    </div>
+  </div>
+  <div class="page-body">
+    {% block content %}{% endblock %}
+  </div>
+</div>
+{% else %}
+  <!-- Redireccionar a login si no hay sesión -->
+  <script>
+    window.location.href = '/seguridad/login';
+  </script>
+{% endif %}
+
+<!-- Spinner global -->
+<div class="spinner-overlay" id="globalSpinner">
+  <div class="spinner-border text-light" style="width:3rem;height:3rem;"></div>
+</div>
+
+<!-- Toast container -->
+<div class="toast-container" id="toastContainer"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="{{ url_for('static', filename='js/main.js') }}"></script>
+<script>
+// ── Utilidades globales ────────────────────────────────────
+function showToast(msg, tipo='success') {
+  const colors = {success:'bg-success', danger:'bg-danger', warning:'bg-warning text-dark', info:'bg-info text-dark'};
+  const t = document.createElement('div');
+  t.className = `toast align-items-center text-white ${colors[tipo]||colors.success} border-0 show`;
+  t.setAttribute('role','alert');
+  t.innerHTML = `<div class="d-flex"><div class="toast-body">${msg}</div>
+    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button></div>`;
+  document.getElementById('toastContainer').appendChild(t);
+  new bootstrap.Toast(t, {delay:3500}).show();
+  setTimeout(()=>t.remove(), 4000);
+}
+
+function spinner(show) {
+  document.getElementById('globalSpinner').classList.toggle('show', show);
+}
+
+async function api(method, url, body=null) {
+  spinner(true);
+  try {
+    const opts = { method, headers: {'Content-Type':'application/json'} };
+    if (body) opts.body = JSON.stringify(body);
+    const r = await fetch(url, opts);
+    const data = await r.json().catch(()=>({}));
+    if (!r.ok) throw new Error(data.error || `Error ${r.status}`);
+    return data;
+  } finally { spinner(false); }
+}
+
+function fmtMoney(v) {
+  return new Intl.NumberFormat('es-CO',{style:'currency',currency:'COP',maximumFractionDigits:0}).format(v||0);
+}
+function fmtDate(d) {
+  if (!d) return '-';
+  return new Date(d).toLocaleDateString('es-CO');
+}
+</script>
+{% block extra_js %}{% endblock %}
+</body>
+</html>

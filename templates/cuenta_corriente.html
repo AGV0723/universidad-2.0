@@ -1,0 +1,174 @@
+{% extends "base.html" %}
+{% block title %}Cuenta Corriente{% endblock %}
+{% block page_title %}Cuenta Corriente del Estudiante{% endblock %}
+
+{% block content %}
+<div class="row g-3 mb-3">
+  <div class="col-md-4">
+    <label class="form-label fw-semibold">Estudiante</label>
+    <select class="form-select" id="selEstudiante">
+      <option value="">Seleccionar estudiante...</option>
+    </select>
+  </div>
+  <div class="col-md-4">
+    <label class="form-label fw-semibold">Período</label>
+    <select class="form-select" id="selPeriodo">
+      <option value="">Seleccionar período...</option>
+    </select>
+  </div>
+  <div class="col-md-4" style="display:flex;align-items:flex-end">
+    <button class="btn btn-primary w-100" onclick="cargarCuenta()"><i class="bi bi-search me-1"></i>Ver Cuenta</button>
+  </div>
+</div>
+
+<ul class="nav nav-tabs mb-3" id="tabs">
+  <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tabCuenta">Cuenta Corriente</button></li>
+  <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabHistorial">Historial</button></li>
+</ul>
+
+<div class="tab-content">
+  <!-- TAB CUENTA CORRIENTE -->
+  <div class="tab-pane fade show active" id="tabCuenta">
+    <div id="cuentaContent" class="alert alert-info"><i class="bi bi-info-circle me-1"></i>Seleccione un estudiante y período</div>
+  </div>
+  
+  <!-- TAB HISTORIAL -->
+  <div class="tab-pane fade" id="tabHistorial">
+    <div id="historialContent" class="alert alert-info"><i class="bi bi-info-circle me-1"></i>Cargue una cuenta para ver el historial</div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let estudiantes=[], periodos=[], estSeleccionado=null;
+
+async function cargarTodo() {
+  [estudiantes, periodos] = await Promise.all([
+    api('GET','/estudiantes/'),
+    api('GET','/periodos/')
+  ]);
+  
+  const se=document.getElementById('selEstudiante');
+  estudiantes.forEach(e=>se.appendChild(new Option(`${e.primer_nombre} ${e.apellido} (${e.codigo_estudiantil})`,e.id_estudiante)));
+  
+  const sp=document.getElementById('selPeriodo');
+  periodos.forEach(p=>sp.appendChild(new Option(`${p.codigo} — ${p.descripcion}`,p.id_periodo)));
+}
+
+async function cargarCuenta(){
+  const idE=document.getElementById('selEstudiante').value;
+  const idP=document.getElementById('selPeriodo').value;
+  
+  if(!idE||!idP){
+    showToast('Seleccione estudiante y período','warning');
+    return;
+  }
+  
+  estSeleccionado={id_estudiante:idE,id_periodo:idP};
+  
+  try{
+    const cuenta=await api('GET',`/cuentas-corriente/${idE}/${idP}`);
+    mostrarCuenta(cuenta);
+    cargarHistorial(idE);
+  }catch(e){
+    document.getElementById('cuentaContent').innerHTML=`<div class="alert alert-warning"><i class="bi bi-exclamation-triangle me-1"></i>${e.message}</div>`;
+  }
+}
+
+function mostrarCuenta(cuenta){
+  const filas=cuenta.movimientos.map(m=>`<tr>
+    <td>${fmtDate(m.fecha_movimiento)}</td>
+    <td><span class="badge ${m.tipo==='COBRO'?'bg-danger':'bg-success'}">${m.tipo}</span></td>
+    <td><span class="badge bg-secondary">${m.codigo_detalle}</span></td>
+    <td>${m.descripcion_breve||'—'}</td>
+    <td>${m.desc_codigo}</td>
+    <td class="text-end fw-bold">${fmtMoney(m.monto)}</td>
+  </tr>`).join('');
+  
+  const html=`
+    <div class="row g-3 mb-3">
+      <div class="col-md-3">
+        <div class="card text-center">
+          <div class="card-body">
+            <small class="text-muted">Total Cobros</small>
+            <p class="h5 text-danger mb-0">${fmtMoney(cuenta.total_cobros)}</p>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="card text-center">
+          <div class="card-body">
+            <small class="text-muted">Total Pagos</small>
+            <p class="h5 text-success mb-0">${fmtMoney(cuenta.total_pagos)}</p>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="card text-center">
+          <div class="card-body">
+            <small class="text-muted">Saldo</small>
+            <p class="h5 ${cuenta.saldo===0?'text-success':'text-danger'} mb-0">${fmtMoney(cuenta.saldo)}</p>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="card text-center">
+          <div class="card-body">
+            <small class="text-muted">Estado</small>
+            <p class="mb-0"><span class="badge ${cuenta.balanceado?'bg-success':'bg-warning'}">${cuenta.balanceado?'Balanceado':'Pendiente'}</span></p>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="card">
+      <div class="card-header fw-semibold"><i class="bi bi-list me-1"></i>Movimientos</div>
+      <div class="card-body p-0">
+        <table class="table table-sm table-striped mb-0">
+          <thead class="table-light">
+            <tr><th>Fecha</th><th>Tipo</th><th>Código</th><th>Descripción Breve</th><th>Concepto</th><th class="text-end">Monto</th></tr>
+          </thead>
+          <tbody>${filas||'<tr><td colspan="6" class="text-center text-muted">Sin movimientos</td></tr>'}</tbody>
+        </table>
+      </div>
+    </div>
+  `;
+  
+  document.getElementById('cuentaContent').innerHTML=html;
+}
+
+async function cargarHistorial(idE){
+  try{
+    const historial=await api('GET',`/cuentas-corriente/${idE}/historial`);
+    
+    const filas=historial.map(h=>`<tr>
+      <td><span class="badge bg-secondary">${h.codigo}</span></td>
+      <td>${h.desc_periodo}</td>
+      <td>${fmtDate(h.fecha_inicio)} - ${fmtDate(h.fecha_fin)}</td>
+      <td class="text-end">${fmtMoney(h.total_cobros)}</td>
+      <td class="text-end">${fmtMoney(h.total_pagos)}</td>
+      <td class="text-end ${h.saldo===0?'text-success':'text-danger'} fw-bold">${fmtMoney(h.saldo)}</td>
+    </tr>`).join('');
+    
+    document.getElementById('historialContent').innerHTML=`
+      <div class="card">
+        <div class="card-header fw-semibold"><i class="bi bi-clock-history me-1"></i>Histórico por Período</div>
+        <div class="card-body p-0">
+          <table class="table table-sm table-striped mb-0">
+            <thead class="table-light">
+              <tr><th>Código</th><th>Período</th><th>Fechas</th><th class="text-end">Cobros</th><th class="text-end">Pagos</th><th class="text-end">Saldo</th></tr>
+            </thead>
+            <tbody>${filas}</tbody>
+          </table>
+        </div>
+      </div>
+    `;
+  }catch(e){
+    document.getElementById('historialContent').innerHTML=`<div class="alert alert-warning"><i class="bi bi-exclamation-triangle me-1"></i>${e.message}</div>`;
+  }
+}
+
+cargarTodo();
+</script>
+{% endblock %}

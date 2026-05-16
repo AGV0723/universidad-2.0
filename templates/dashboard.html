@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — Universidad del Norte{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="row g-3 mb-4">
+  <div class="col-sm-6 col-xl-3">
+    <div class="card p-3 d-flex flex-row align-items-center gap-3">
+      <div class="rounded-3 p-3" style="background:#e8f0fe"><i class="bi bi-people-fill fs-3 text-primary"></i></div>
+      <div>
+        <div class="text-muted small">Estudiantes</div>
+        <div class="fw-bold fs-4" id="cnt-est">—</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-xl-3">
+    <div class="card p-3 d-flex flex-row align-items-center gap-3">
+      <div class="rounded-3 p-3" style="background:#e6f4ea"><i class="bi bi-journal-bookmark-fill fs-3 text-success"></i></div>
+      <div>
+        <div class="text-muted small">Programas</div>
+        <div class="fw-bold fs-4" id="cnt-prog">—</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-xl-3">
+    <div class="card p-3 d-flex flex-row align-items-center gap-3">
+      <div class="rounded-3 p-3" style="background:#fff3e0"><i class="bi bi-clipboard-check-fill fs-3 text-warning"></i></div>
+      <div>
+        <div class="text-muted small">Inscripciones</div>
+        <div class="fw-bold fs-4" id="cnt-insc">—</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-xl-3">
+    <div class="card p-3 d-flex flex-row align-items-center gap-3">
+      <div class="rounded-3 p-3" style="background:#fce4ec"><i class="bi bi-book-half fs-3 text-danger"></i></div>
+      <div>
+        <div class="text-muted small">Asignaturas</div>
+        <div class="fw-bold fs-4" id="cnt-asig">—</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3">
+  <div class="col-lg-6">
+    <div class="card h-100">
+      <div class="card-header bg-primary text-white fw-semibold">
+        <i class="bi bi-lightning-charge me-1"></i> Accesos rápidos
+      </div>
+      <div class="card-body d-flex flex-wrap gap-2">
+        <a href="/paginas/estudiantes" class="btn btn-outline-primary"><i class="bi bi-person-plus me-1"></i>Nuevo estudiante</a>
+        <a href="/paginas/inscripciones" class="btn btn-outline-success"><i class="bi bi-clipboard-plus me-1"></i>Nueva inscripción</a>
+        <a href="/paginas/programas" class="btn btn-outline-secondary"><i class="bi bi-journal me-1"></i>Ver programas</a>
+        <a href="/paginas/reportes" class="btn btn-outline-warning"><i class="bi bi-bar-chart me-1"></i>Reportes</a>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-6">
+    <div class="card h-100">
+      <div class="card-header bg-success text-white fw-semibold">
+        <i class="bi bi-calendar3 me-1"></i> Períodos activos
+      </div>
+      <div class="card-body p-0">
+        <table class="table table-sm mb-0" id="tbl-periodos">
+          <thead class="table-light"><tr><th>Código</th><th>Descripción</th><th>Desde</th><th>Hasta</th></tr></thead>
+          <tbody><tr><td colspan="4" class="text-center text-muted py-3">Cargando...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(async () => {
+  try {
+    const [ests, progs, asigs, inscs, pers] = await Promise.all([
+      fetch('/estudiantes/').then(r=>r.json()),
+      fetch('/programas/').then(r=>r.json()),
+      fetch('/asignaturas/').then(r=>r.json()),
+      fetch('/inscripciones/').then(r=>r.json()),
+      fetch('/periodos/?activos=true').then(r=>r.json()),
+    ]);
+    document.getElementById('cnt-est').textContent  = ests.length;
+    document.getElementById('cnt-prog').textContent = progs.length;
+    document.getElementById('cnt-asig').textContent = asigs.length;
+    document.getElementById('cnt-insc').textContent = inscs.length;
+
+    const tbody = document.querySelector('#tbl-periodos tbody');
+    if (pers.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">Sin períodos activos</td></tr>';
+    } else {
+      tbody.innerHTML = pers.map(p=>`<tr>
+        <td><span class="badge bg-success">${p.codigo}</span></td>
+        <td>${p.descripcion||''}</td>
+        <td>${fmtDate(p.fecha_inicio)}</td>
+        <td>${fmtDate(p.fecha_fin)}</td>
+      </tr>`).join('');
+    }
+  } catch(e) {
+    console.error(e);
+  }
+})();
+</script>
+{% endblock %}

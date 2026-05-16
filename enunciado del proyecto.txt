@@ -1,0 +1,60 @@
+Proyecto Desarrollo Python o JavaScript / Driver y RDBMS (semana 16)
+Cuenta Corriente del estudiante
+
+Instrucciones
+Para los grupos definidos elaborar una implementación completa sobre base de datos que incluye:
+1.	Desarrollo de un modelo Entidad-Relación basado en el análisis de una propuesta de negocio. [ENTEGRABLE #1]
+2.	 Conversión del modelo entidad-relación en modelo relacional. [ENTREGABLE #2]
+3.	Desarrollo de un script para implementar el modelo en una base de datos relacional. [ENTREGABLE #3]
+4.	Desarrollo de un script que ingrese los datos básicos en cada una de las tablas del modelo requeridos para probar con datos que es operativo y que responde a las reglas del negocio modelado [ENTREGABLE #4]
+5.	Desarrollo de una aplicación que implemente y facilite el ingreso de los datos en las bases de datos respetando las reglas del negocio. El desarrollo se hará en un framework de Python o Javascript  [ENTREGABLE #5]
+
+Se debe hacer una exposición del tema que incluya la tecnología utilizada tanto del motor de base de datos (RDBMS), La herramienta de desarrollo de la aplicación y el driver utilizado. Así como un breve recuento de los retos durante la elaboración de la solución. [ENTREGABLE #6]
+Rúbrica de Calificación
+•	Pertinencia del Modelo E-R y Relacional presentado. Uso de la IA (50%)
+•	Pertinencia de los scripts en la Base de datos seleccionada. Uso de la IA (20%)
+•	Pertinencia del software que ingresa datos y gestiona todo el modelo de datos haciendo que se cumplan las reglas de negocio. Uso de la IA(20%)
+•	Presentación de la experiencia. Uso de la IA (10%)
+ 
+Enunciado del proyecto.
+Una Universidad privada del Caribe Colombiano alineada con su cadena de valor de entregar a la sociedad estudiantes con una formación de alta calidad lo cual tiene unos costos operativos que se financian en su mayor parte por el ingreso que se genera del cobro de unos derechos pecuniarios autorizados por el Ministerio de Educación ha decidido contratarlos para que desarrollen un sistema de información que apoye la gestión y administración del ingreso que se genera por el cobro directo o financiado de los valores de matrícula.
+Los valores de matrícula se generan por periodo académico basado en unas reglas de cobro que permiten el cobro en dos modalidades: Global o por créditos. Esto quiere decir por para cada periodo por programa académico hay un valor global y un valor por crédito.
+El valor total se obtiene solicitando la información del estudiante, el programa académico y la modalidad del cobro: Global o por créditos. Si la modalidad es por créditos debe solicitarse las asignaturas a cursar y con esa información determinar el monto a cobrar.
+De todo programa académico que se debe tener su plan de estudio que indique las asignaturas por semestre y la cantidad de créditos que tiene cada una.
+La generación de los cobros se puede hacer individual o de forma masiva. A este cobro se le llamará volante de matrícula, donde estará detallado todo lo que se espera recibir del estudiante.
+Los resultados de la generación de cobro deben llevarse de forma individual para cada estudiante en algo que de be llamarse la cuenta corriente del estudiante.
+En esta cuenta corriente todo lo que se ingrese debe estar codificado y la codificación debe asociarse a códigos de cobro (códigos de detalle de lo que se le cobra al estudiante) o a códigos de pago (lo que se recibe del estudiante). Al final de cada ejercicio de cobro y pago el saldo de la cuenta corriente debe estar balanceado.
+Dentro de lo que se puede codificar como código de detalle puede estar, por ejemplo:
+Grupo	Código de detalle	Descripción
+COBRO	PMAT	Valor Global por programa
+COBRO	PCRE	Valor crédito por programa
+COBRO	PCAR	Carné digital
+COBRO	PLAB	Laboratorios Médicos
+COBRO	PEXA	Exámenes de ingreso
+PAGO	MPAG	Valor pagado para Matrícula
+PAGO	ANT	Anticipo
+PAGO	DESC	Descuento
+PAGO	CRED	Crédito
+
+Debe existir una interfaz o menú que almacene y gestione
+Toda la información del estudiante. (pestaña de Estudiante(s) con CRUD en la que se pueda consultar sus atributos, gestionar matrículas (seleccionando la modalidad de cobro (por créditos o global)), volante de matrícula, pagos y cuenta corriente (cobros y pagos))
+Toda la información requerida para elaborar el cobro (programa académico, modalidad de cobro, semestre que va a cursar). (se necesita CRUD de asignaturas, Programas académicos)
+Toda la información de los códigos de detalle, indicando a que grupo pertenece. Los códigos de detalle asociados a PAGO se suman y los asociados a COBRO se suman, estas suman deben estar balanceadas, es decir un balance de cero.
+Toda la información de los programas académicos y sus planes de estudio. (asignaturas por semestre y número de créditos de cada asignatura) (pestaña donde se puedan ver y gestionar los Programas académicos que se inserten, también que se pueda dar click a cada una de sus asignaturas y ver su información)
+Toda la información que se genera en la cuenta corriente del estudiante: Cobros y Pagos; Siempre mostrando el saldo para ese periodo académico. Se debe mostrar el código de detalle y una descripción breve del mismo.
+Si la modalidad de cobro es por créditos, se debe mostrar una lista de las asignaturas a cursar (usando el programa y semestre a cursar) y luego usar la regla de cobro por créditos para ese periodo, programa.
+Si la modalidad de cobro es global. Se debe hacer usando la regla de cobro por programa para ese periodo y programa.
+Toda la información del volante (un resumen de la cuenta corriente para el periodo académico)
+Para la gestión del sistema se contratan personas con tres roles o perfiles: ADMINISTRADOR, SUPERVISOR y ASISTENTE. La persona contratada sólo puede tener un solo rol o perfil y podrán realizar tareas en el sistema con la asignación de un usuario y contraseña. El rol de ADMINISTRADOR (especial) tendrá todas las funciones del sistema. El rol de SUPERVISOR ingresar toda la información de Programas, planes de estudio, estudiantes, reglas de cobro por periodo, programa y modalidad de cobro, códigos de detalle con su descripción. El rol de ASISTENTE se encarga de ingresar la información del estudiante relacionado a la gestión de cobro, su semestre y la modalidad de cobro, generar el cobro individual o en forma masiva. 
+Debe existir un rol especial ADMINISTRADOR que debe estar asignado a una persona contratada con perfil técnico y podrá hacer lo que hace un rol ADMINISTRATIVO. Adicional, gestionar los roles o perfiles, los menús y los usuarios del sistema, asignar la persona al usuario y enviar su contraseña al correo indicado.
+Hay situaciones específicas que debe soportar el diseño del sistema como son: 
+•	Crear la cuenta corriente de un estudiante nuevo al momento de generar el cobro ya sea en forma individual o masiva.
+•	Simular un pago en línea o por caja para reflejar los detalles de pago en la cuenta corriente del estudiante (esto debe tener su propia estructura).
+•	Mostrar el balance de la cuenta corriente COBROs – PAGOs = 0.
+
+Se requiere los siguientes reportes que serán indicadores de gestión:
+•	Un listado de los estudiantes que incluya programa, modalidad de cobro y monto o valor.
+•	Un listado totalizado para conocer el ingreso esperado por periodo académico y programa.
+•	Un listado de los estudiantes que están pendientes de pago en el periodo académicos, este reporte debe solicitar o escoger de una lista el programa académico antes de mostrar el resultado.
+•	Un listado que indique el ingreso real que se ha recibido en el periodo académico.
+•	Un listado de los estudiantes que tienen crédito financiero indicando el valor del crédito y totalizarlo para saber cual es el objetivo de la cartera o cuentas por cobrar.

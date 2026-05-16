@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Universidad del Norte</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        body {
+            background: linear-gradient(135deg, #003366 0%, #004d99 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .login-container {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 0 30px rgba(0,0,0,0.3);
+            width: 100%;
+            max-width: 400px;
+            padding: 40px;
+        }
+        .login-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .login-header h1 {
+            color: #003366;
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+        .login-header p {
+            color: #666;
+            font-size: 13px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        .form-label {
+            color: #333;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+        .form-control {
+            border: 1px solid #ddd;
+            padding: 10px 15px;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+        .form-control:focus {
+            border-color: #003366;
+            box-shadow: 0 0 0 0.2rem rgba(0, 51, 102, 0.25);
+        }
+        .btn-login {
+            width: 100%;
+            padding: 10px;
+            background: #003366;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-weight: 600;
+            font-size: 15px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        .btn-login:hover {
+            background: #002244;
+        }
+        .alert {
+            margin-bottom: 20px;
+            font-size: 13px;
+        }
+        .spinner-border {
+            display: none;
+        }
+        .spinner-border.show {
+            display: inline-block;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="login-header">
+            <h1>📚 Universidad del Norte</h1>
+            <p>Sistema de Gestión Académica</p>
+        </div>
+
+        {% if error %}
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            {{ error }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        {% endif %}
+
+        <form id="loginForm" method="POST">
+            <div class="form-group">
+                <label class="form-label">Usuario</label>
+                <input type="text" class="form-control" id="username" name="username" 
+                       placeholder="Ingrese su usuario" required>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Contraseña</label>
+                <input type="password" class="form-control" id="password" name="password" 
+                       placeholder="Ingrese su contraseña" required>
+            </div>
+
+            <button type="submit" class="btn-login" id="btnLogin">
+                <span class="spinner-border spinner-border-sm me-2" id="spinner"></span>
+                Iniciar Sesión
+            </button>
+        </form>
+
+        <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #eee; text-align: center;">
+            <p style="color: #666; font-size: 12px;">
+                🔧 Modo desarrollo: Cualquier usuario/contraseña funciona
+            </p>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const spinner = document.getElementById('spinner');
+            const btn = document.getElementById('btnLogin');
+            
+            spinner.classList.add('show');
+            btn.disabled = true;
+
+            try {
+                const response = await fetch('/seguridad/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        username: document.getElementById('username').value,
+                        password: document.getElementById('password').value
+                    })
+                });
+
+                if (response.ok) {
+                    window.location.href = '/';
+                } else {
+                    const data = await response.json();
+                    alert('Error: ' + (data.error || 'Error desconocido'));
+                }
+            } catch (error) {
+                alert('Error en la solicitud: ' + error.message);
+            } finally {
+                spinner.classList.remove('show');
+                btn.disabled = false;
+            }
+        });
+    </script>
+</body>
+</html>

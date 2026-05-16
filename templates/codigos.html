@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% block title %}Códigos de Detalle{% endblock %}
+{% block page_title %}Códigos de Detalle{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <div class="d-flex gap-2">
+    <select class="form-select form-select-sm" style="width:160px" id="filtroGrupo">
+      <option value="">Todos</option>
+      <option value="COBRO">COBRO</option>
+      <option value="PAGO">PAGO</option>
+    </select>
+  </div>
+  <button class="btn btn-uc btn-sm" onclick="abrirModal()"><i class="bi bi-plus me-1"></i>Nuevo Código</button>
+</div>
+<div class="row g-3">
+  <div class="col-md-6">
+    <h6 class="fw-semibold text-danger"><i class="bi bi-arrow-up-circle me-1"></i>Cobros</h6>
+    <div class="card"><div class="card-body p-0"><table class="table table-sm mb-0" id="tblCobro">
+      <thead class="table-light"><tr><th>Código</th><th>Descripción</th><th></th></tr></thead>
+      <tbody></tbody>
+    </table></div></div>
+  </div>
+  <div class="col-md-6">
+    <h6 class="fw-semibold text-success"><i class="bi bi-arrow-down-circle me-1"></i>Pagos</h6>
+    <div class="card"><div class="card-body p-0"><table class="table table-sm mb-0" id="tblPago">
+      <thead class="table-light"><tr><th>Código</th><th>Descripción</th><th></th></tr></thead>
+      <tbody></tbody>
+    </table></div></div>
+  </div>
+</div>
+<div class="modal fade" id="modal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header bg-primary text-white">
+        <h5 class="modal-title" id="modalTitulo">Nuevo Código de Detalle</h5>
+        <button class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="recId"/>
+        <div class="mb-3"><label class="form-label">Código *</label><input class="form-control" id="fCodigo" placeholder="Ej: PMAT"/></div>
+        <div class="mb-3"><label class="form-label">Descripción *</label><input class="form-control" id="fDesc"/></div>
+        <div class="mb-3">
+          <label class="form-label">Grupo *</label>
+          <select class="form-select" id="fGrupo">
+            <option value="COBRO">COBRO — Lo que se le cobra al estudiante</option>
+            <option value="PAGO">PAGO — Lo que paga el estudiante</option>
+          </select>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button class="btn btn-primary" onclick="guardar()">Guardar</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script>
+let datos=[];
+const m=new bootstrap.Modal(document.getElementById('modal'));
+async function cargar(){datos=await api('GET','/codigos-detalle/');render();}
+function makeRow(d){return `<tr>
+  <td><span class="badge ${d.grupo==='COBRO'?'bg-danger':'bg-success'}">${d.codigo}</span></td>
+  <td>${d.descripcion}</td>
+  <td>
+    <button class="btn btn-xs btn-sm btn-outline-primary me-1" onclick="editar(${d.id_codigo})"><i class="bi bi-pencil"></i></button>
+    <button class="btn btn-xs btn-sm btn-outline-danger" onclick="eliminar(${d.id_codigo})"><i class="bi bi-trash"></i></button>
+  </td>
+</tr>`;}
+function render(){
+  const cobros=datos.filter(d=>d.grupo==='COBRO');
+  const pagos=datos.filter(d=>d.grupo==='PAGO');
+  document.querySelector('#tblCobro tbody').innerHTML=cobros.length?cobros.map(makeRow).join(''):'<tr><td colspan="3" class="text-center text-muted">Sin códigos</td></tr>';
+  document.querySelector('#tblPago tbody').innerHTML=pagos.length?pagos.map(makeRow).join(''):'<tr><td colspan="3" class="text-center text-muted">Sin códigos</td></tr>';
+}
+function abrirModal(){document.getElementById('recId').value='';document.getElementById('modalTitulo').textContent='Nuevo Código';['fCodigo','fDesc'].forEach(id=>document.getElementById(id).value='');document.getElementById('fGrupo').value='COBRO';m.show();}
+async function editar(id){const d=await api('GET',`/codigos-detalle/${id}`);document.getElementById('recId').value=d.id_codigo;document.getElementById('modalTitulo').textContent='Editar Código';document.getElementById('fCodigo').value=d.codigo;document.getElementById('fDesc').value=d.descripcion;document.getElementById('fGrupo').value=d.grupo;m.show();}
+async function guardar(){
+  const id=document.getElementById('recId').value;
+  const body={codigo:document.getElementById('fCodigo').value,descripcion:document.getElementById('fDesc').value,grupo:document.getElementById('fGrupo').value};
+  try{if(id)await api('PUT',`/codigos-detalle/${id}`,body);else await api('POST','/codigos-detalle/',body);showToast('Guardado');m.hide();cargar();}catch(e){showToast(e.message,'danger');}
+}
+async function eliminar(id){if(!confirm('¿Eliminar código?'))return;try{await api('DELETE',`/codigos-detalle/${id}`);showToast('Eliminado','warning');cargar();}catch(e){showToast(e.message,'danger');}}
+cargar();
+</script>
+{% endblock %}

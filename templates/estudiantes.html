@@ -1,0 +1,357 @@
+<!--
+estudiantes page con CRUD + inscripción + cuenta corriente + volante
+-->
+
+{% extends "base.html" %}
+{% block title %}Estudiantes{% endblock %}
+{% block page_title %}Gestión de Estudiantes{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <div class="d-flex gap-2">
+    <input id="filtro" class="form-control form-control-sm" style="width:220px" placeholder="Buscar..."/>
+    <select id="filtroPrograma" class="form-select form-select-sm" style="width:200px">
+      <option value="">Todos los programas</option>
+    </select>
+  </div>
+  <button class="btn btn-uc btn-sm" onclick="abrirModal()">
+    <i class="bi bi-person-plus me-1"></i>Nuevo Estudiante
+  </button>
+</div>
+
+<div class="card">
+  <div class="card-body p-0">
+    <table class="table table-hover mb-0" id="tblEst">
+      <thead class="table-dark">
+        <tr><th>Código</th><th>Nombre</th><th>Documento</th><th>Programa</th><th>Correo</th><th>Estado</th><th>Acciones</th></tr>
+      </thead>
+      <tbody><tr><td colspan="7" class="text-center py-4 text-muted">Cargando...</td></tr></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Modal Estudiante -->
+<div class="modal fade" id="modalEst" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header bg-primary text-white">
+        <h5 class="modal-title" id="modalEstTitulo">Nuevo Estudiante</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="estId"/>
+        <div class="row g-3">
+          <div class="col-md-4"><label class="form-label">Código Estudiantil *</label><input class="form-control" id="eCodigo"/></div>
+          <div class="col-md-4"><label class="form-label">Documento Identidad *</label><input class="form-control" id="eDoc"/></div>
+          <div class="col-md-4"><label class="form-label">Teléfono</label><input class="form-control" id="eTel"/></div>
+          <div class="col-md-3"><label class="form-label">Primer Nombre *</label><input class="form-control" id="eNom1"/></div>
+          <div class="col-md-3"><label class="form-label">Segundo Nombre</label><input class="form-control" id="eNom2"/></div>
+          <div class="col-md-3"><label class="form-label">Apellido *</label><input class="form-control" id="eApe1"/></div>
+          <div class="col-md-3"><label class="form-label">Segundo Apellido</label><input class="form-control" id="eApe2"/></div>
+          <div class="col-md-6"><label class="form-label">Correo</label><input class="form-control" type="email" id="eCorreo"/></div>
+          <div class="col-md-3">
+            <label class="form-label">Programa *</label>
+            <select class="form-select" id="ePrograma" onchange="cargarPensumModal(this.value)">
+              <option value="">Seleccionar...</option>
+            </select>
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">Pensum *</label>
+            <select class="form-select" id="ePensum"><option value="">Seleccionar programa...</option></select>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button class="btn btn-primary" onclick="guardarEstudiante()">Guardar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Ver detalle / Cuenta corriente -->
+<div class="modal fade" id="modalDetalle" tabindex="-1">
+  <div class="modal-dialog modal-xl">
+    <div class="modal-content">
+      <div class="modal-header bg-success text-white">
+        <h5 class="modal-title" id="modalDetTitulo">Detalle Estudiante</h5>
+        <button class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <ul class="nav nav-tabs mb-3" id="tabsDet">
+          <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tabInfo">Información</button></li>
+          <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabCuenta">Cuenta Corriente</button></li>
+          <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabInscripciones">Inscripciones</button></li>
+        </ul>
+        <div class="tab-content">
+          <div class="tab-pane fade show active" id="tabInfo">
+            <div id="infoEstudiante" class="row g-2"></div>
+          </div>
+          <div class="tab-pane fade" id="tabCuenta">
+            <div class="d-flex gap-2 mb-3">
+              <select class="form-select form-select-sm" style="width:200px" id="selPeriodoCta"></select>
+              <button class="btn btn-sm btn-success" onclick="verCuenta()">Ver cuenta</button>
+            </div>
+            <div id="cuentaContent"></div>
+          </div>
+          <div class="tab-pane fade" id="tabInscripciones">
+            <div id="inscEstContent"><p class="text-muted">Cargando...</p></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Pago -->
+<div class="modal fade" id="modalPago" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header bg-warning">
+        <h5 class="modal-title">Registrar Pago</h5>
+        <button class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="pagoIdInsc"/>
+        <div class="mb-3"><label class="form-label">Monto *</label><input class="form-control" type="number" id="pagoMonto" min="1"/></div>
+        <div class="mb-3">
+          <label class="form-label">Código de Pago *</label>
+          <select class="form-select" id="pagoCodigoSel"></select>
+        </div>
+        <div class="mb-3"><label class="form-label">Descripción</label><input class="form-control" id="pagoDesc"/></div>
+        <div class="mb-3">
+          <label class="form-label">Origen</label>
+          <select class="form-select" id="pagoOrigen">
+            <option value="CAJA">Caja</option>
+            <option value="EN_LINEA">En línea</option>
+          </select>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button class="btn btn-warning" onclick="confirmarPago()">Registrar Pago</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let estudiantes=[], programas=[], periodos=[], codigosPago=[], estSeleccionado=null;
+const mEst=new bootstrap.Modal(document.getElementById('modalEst'));
+const mDet=new bootstrap.Modal(document.getElementById('modalDetalle'));
+const mPago=new bootstrap.Modal(document.getElementById('modalPago'));
+
+async function cargarTodo() {
+  [estudiantes, programas, periodos, codigosPago] = await Promise.all([
+    api('GET','/estudiantes/'),
+    api('GET','/programas/'),
+    api('GET','/periodos/'),
+    api('GET','/codigos-detalle/?grupo=PAGO'),
+  ]);
+  renderTabla(estudiantes);
+  // Poblar filtro programas
+  const fp=document.getElementById('filtroPrograma');
+  programas.forEach(p=>{ const o=new Option(p.nombre,p.id_programa); fp.appendChild(o); });
+  // Poblar select periodo cuenta
+  const sp=document.getElementById('selPeriodoCta');
+  periodos.forEach(p=>{ const o=new Option(p.codigo,p.id_periodo); sp.appendChild(o); });
+  // Poblar select pago codigos
+  const sc=document.getElementById('pagoCodigoSel');
+  codigosPago.forEach(c=>{ const o=new Option(`${c.codigo} — ${c.descripcion}`,c.codigo); sc.appendChild(o); });
+  // Poblar selects del modal
+  const se=document.getElementById('ePrograma');
+  programas.forEach(p=>{ se.appendChild(new Option(p.nombre,p.id_programa)); });
+}
+
+function renderTabla(data) {
+  const q=document.getElementById('filtro').value.toLowerCase();
+  const pid=document.getElementById('filtroPrograma').value;
+  const rows=data.filter(e=>{
+    const match=(e.primer_nombre+' '+e.apellido+' '+e.codigo_estudiantil).toLowerCase().includes(q);
+    const matchP=pid?String(e.id_programa)===String(pid):true;
+    return match&&matchP;
+  });
+  document.querySelector('#tblEst tbody').innerHTML=rows.length===0?
+    '<tr><td colspan="7" class="text-center text-muted py-3">Sin resultados</td></tr>':
+    rows.map(e=>`<tr>
+      <td><span class="badge bg-secondary">${e.codigo_estudiantil}</span></td>
+      <td><strong>${e.primer_nombre} ${e.apellido}</strong></td>
+      <td>${e.documento_identidad}</td>
+      <td>${e.nombre_programa||''}</td>
+      <td>${e.correo||'—'}</td>
+      <td>${e.activo?'<span class="badge bg-success">Activo</span>':'<span class="badge bg-secondary">Inactivo</span>'}</td>
+      <td>
+        <button class="btn btn-sm btn-outline-info me-1" onclick="verDetalle(${e.id_estudiante})"><i class="bi bi-eye"></i></button>
+        <button class="btn btn-sm btn-outline-primary me-1" onclick="editarEstudiante(${e.id_estudiante})"><i class="bi bi-pencil"></i></button>
+        <button class="btn btn-sm btn-outline-danger" onclick="desactivarEstudiante(${e.id_estudiante},'${e.primer_nombre}')"><i class="bi bi-person-dash"></i></button>
+      </td>
+    </tr>`).join('');
+}
+
+function abrirModal(est=null) {
+  document.getElementById('estId').value='';
+  document.getElementById('modalEstTitulo').textContent='Nuevo Estudiante';
+  ['eCodigo','eDoc','eTel','eNom1','eNom2','eApe1','eApe2','eCorreo'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('ePrograma').value='';
+  document.getElementById('ePensum').innerHTML='<option value="">Seleccionar programa...</option>';
+  mEst.show();
+}
+
+async function cargarPensumModal(idPrograma) {
+  const sel=document.getElementById('ePensum');
+  sel.innerHTML='<option value="">Cargando...</option>';
+  if(!idPrograma){ sel.innerHTML='<option value="">Seleccionar programa...</option>'; return; }
+  const pens=await api('GET',`/pensum/programa/${idPrograma}`);
+  sel.innerHTML=pens.map(p=>`<option value="${p.id_pensum}">${p.version} (${p.total_semestres} sem.)</option>`).join('');
+}
+
+async function editarEstudiante(id) {
+  const e=await api('GET',`/estudiantes/${id}`);
+  document.getElementById('estId').value=e.id_estudiante;
+  document.getElementById('modalEstTitulo').textContent='Editar Estudiante';
+  document.getElementById('eCodigo').value=e.codigo_estudiantil;
+  document.getElementById('eDoc').value=e.documento_identidad;
+  document.getElementById('eTel').value=e.telefono||'';
+  document.getElementById('eNom1').value=e.primer_nombre;
+  document.getElementById('eNom2').value=e.segundo_nombre||'';
+  document.getElementById('eApe1').value=e.apellido;
+  document.getElementById('eApe2').value=e.segundo_apellido||'';
+  document.getElementById('eCorreo').value=e.correo||'';
+  document.getElementById('ePrograma').value=e.id_programa;
+  await cargarPensumModal(e.id_programa);
+  document.getElementById('ePensum').value=e.id_pensum;
+  mEst.show();
+}
+
+async function guardarEstudiante() {
+  const id=document.getElementById('estId').value;
+  const body={
+    codigo_estudiantil:document.getElementById('eCodigo').value,
+    documento_identidad:document.getElementById('eDoc').value,
+    primer_nombre:document.getElementById('eNom1').value,
+    segundo_nombre:document.getElementById('eNom2').value||null,
+    apellido:document.getElementById('eApe1').value,
+    segundo_apellido:document.getElementById('eApe2').value||null,
+    correo:document.getElementById('eCorreo').value||null,
+    telefono:document.getElementById('eTel').value||null,
+    id_programa:parseInt(document.getElementById('ePrograma').value),
+    id_pensum:parseInt(document.getElementById('ePensum').value),
+  };
+  try {
+    if(id) { await api('PUT',`/estudiantes/${id}`,body); showToast('Estudiante actualizado'); }
+    else    { await api('POST','/estudiantes/',body);    showToast('Estudiante creado'); }
+    mEst.hide();
+    estudiantes=await api('GET','/estudiantes/');
+    renderTabla(estudiantes);
+  } catch(e){ showToast(e.message,'danger'); }
+}
+
+async function desactivarEstudiante(id,nombre){
+  if(!confirm(`¿Desactivar al estudiante "${nombre}"?`)) return;
+  try { await api('DELETE',`/estudiantes/${id}`); showToast('Estudiante desactivado','warning'); estudiantes=await api('GET','/estudiantes/'); renderTabla(estudiantes); }
+  catch(e){ showToast(e.message,'danger'); }
+}
+
+async function verDetalle(id){
+  estSeleccionado=id;
+  const e=await api('GET',`/estudiantes/${id}`);
+  document.getElementById('modalDetTitulo').textContent=`${e.primer_nombre} ${e.apellido}`;
+  document.getElementById('infoEstudiante').innerHTML=`
+    <div class="col-md-4"><label class="text-muted small">Código</label><p class="fw-bold">${e.codigo_estudiantil}</p></div>
+    <div class="col-md-4"><label class="text-muted small">Documento</label><p>${e.documento_identidad}</p></div>
+    <div class="col-md-4"><label class="text-muted small">Teléfono</label><p>${e.telefono||'—'}</p></div>
+    <div class="col-md-6"><label class="text-muted small">Correo</label><p>${e.correo||'—'}</p></div>
+    <div class="col-md-6"><label class="text-muted small">Programa</label><p>${e.nombre_programa}</p></div>
+    <div class="col-md-4"><label class="text-muted small">Pensum</label><p>${e.version_pensum}</p></div>
+    <div class="col-md-4"><label class="text-muted small">Estado</label><p>${e.activo?'<span class="badge bg-success">Activo</span>':'<span class="badge bg-secondary">Inactivo</span>'}</p></div>
+  `;
+  // Cargar inscripciones
+  const inscs=await api('GET',`/inscripciones/?id_estudiante_no=0`).catch(()=>[]);
+  const todas=await api('GET','/inscripciones/');
+  const misInscs=todas.filter(i=>i.id_estudiante==id);
+  const cont=document.getElementById('inscEstContent');
+  if(misInscs.length===0){ cont.innerHTML='<p class="text-muted">Sin inscripciones.</p>'; }
+  else {
+    cont.innerHTML=`<table class="table table-sm"><thead class="table-light"><tr><th>Período</th><th>Semestre</th><th>Modalidad</th><th>Acción</th></tr></thead>
+    <tbody>${misInscs.map(i=>`<tr>
+      <td>${i.codigo_periodo||i.id_periodo}</td>
+      <td>${i.semestre_a_cursar}</td>
+      <td><span class="badge bg-info text-dark">${i.modalidad_cobro}</span></td>
+      <td>
+        <button class="btn btn-xs btn-sm btn-outline-secondary" onclick="verVolante(${i.id_inscripcion})"><i class="bi bi-file-text"></i> Volante</button>
+        <button class="btn btn-xs btn-sm btn-outline-warning ms-1" onclick="abrirPago(${i.id_inscripcion})"><i class="bi bi-cash"></i> Pago</button>
+      </td>
+    </tr>`).join('')}</tbody></table>`;
+  }
+  mDet.show();
+}
+
+async function verCuenta(){
+  const idP=document.getElementById('selPeriodoCta').value;
+  if(!idP||!estSeleccionado){ showToast('Seleccione un período','warning'); return; }
+  const d=await api('GET',`/inscripciones/cuenta-corriente?id_estudiante=${estSeleccionado}&id_periodo=${idP}`);
+  const div=document.getElementById('cuentaContent');
+  const filas=d.movimientos.map(m=>`<tr>
+    <td>${fmtDate(m.fecha_movimiento)}</td>
+    <td><span class="badge ${m.tipo==='COBRO'?'bg-danger':'bg-success'}">${m.tipo}</span></td>
+    <td>${m.codigo}</td>
+    <td>${m.descripcion_breve||'—'}</td>
+    <td class="text-end">${fmtMoney(m.monto)}</td>
+  </tr>`).join('');
+  div.innerHTML=`
+    <table class="table table-sm table-striped">
+      <thead class="table-dark"><tr><th>Fecha</th><th>Tipo</th><th>Código</th><th>Descripción</th><th class="text-end">Monto</th></tr></thead>
+      <tbody>${filas||'<tr><td colspan="5" class="text-center text-muted">Sin movimientos</td></tr>'}</tbody>
+      <tfoot class="table-light fw-bold">
+        <tr><td colspan="4" class="text-end">Total Cobros</td><td class="text-end text-danger">${fmtMoney(d.total_cobros)}</td></tr>
+        <tr><td colspan="4" class="text-end">Total Pagos</td><td class="text-end text-success">${fmtMoney(d.total_pagos)}</td></tr>
+        <tr><td colspan="4" class="text-end">Saldo</td><td class="text-end fw-bold ${d.saldo===0?'text-success':'text-danger'}">${fmtMoney(d.saldo)}</td></tr>
+      </tfoot>
+    </table>
+    <div class="alert ${d.balanceado?'alert-success':'alert-warning'} py-2">
+      ${d.balanceado?'<i class="bi bi-check-circle me-1"></i>Cuenta balanceada':'<i class="bi bi-exclamation-triangle me-1"></i>Saldo pendiente'}
+    </div>`;
+}
+
+async function verVolante(id){
+  const v=await api('GET',`/inscripciones/${id}/volante`);
+  const i=v.inscripcion;
+  let html=`<h5>${i.nombre_estudiante} — ${i.codigo_periodo}</h5>
+    <p class="text-muted">Programa: ${i.nombre_programa} | Semestre: ${i.semestre_a_cursar} | Modalidad: ${i.modalidad_cobro}</p>
+    <table class="table table-sm"><thead class="table-light"><tr><th>Código</th><th>Descripción</th><th>Monto</th></tr></thead>
+    <tbody>${v.cobros.map(c=>`<tr><td>${c.codigo}</td><td>${c.descripcion_breve||c.desc_codigo}</td><td>${fmtMoney(c.monto)}</td></tr>`).join('')}
+    </tbody><tfoot><tr class="fw-bold"><td colspan="2">TOTAL</td><td>${fmtMoney(v.total)}</td></tr></tfoot></table>`;
+  if(v.asignaturas.length>0){
+    html+=`<h6>Asignaturas inscritas</h6><ul>${v.asignaturas.map(a=>`<li>${a.nombre} — ${a.creditos_snapshot} créditos</li>`).join('')}</ul>`;
+  }
+  alert(html.replace(/<[^>]*>/g,' ').replace(/\s+/g,' '));  // simple display
+  // In production you'd open a proper modal or print view
+}
+
+function abrirPago(idInsc){
+  document.getElementById('pagoIdInsc').value=idInsc;
+  document.getElementById('pagoMonto').value='';
+  document.getElementById('pagoDesc').value='';
+  mPago.show();
+}
+
+async function confirmarPago(){
+  const id=document.getElementById('pagoIdInsc').value;
+  const body={
+    monto:parseFloat(document.getElementById('pagoMonto').value),
+    codigo_pago:document.getElementById('pagoCodigoSel').value,
+    descripcion_breve:document.getElementById('pagoDesc').value,
+    origen:document.getElementById('pagoOrigen').value,
+  };
+  try { await api('POST',`/inscripciones/${id}/pago`,body); showToast('Pago registrado'); mPago.hide(); }
+  catch(e){ showToast(e.message,'danger'); }
+}
+
+document.getElementById('filtro').addEventListener('input',()=>renderTabla(estudiantes));
+document.getElementById('filtroPrograma').addEventListener('change',()=>renderTabla(estudiantes));
+
+cargarTodo();
+</script>
+{% endblock %}

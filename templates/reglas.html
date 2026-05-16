@@ -1,0 +1,167 @@
+{% extends "base.html" %}
+{% block title %}Reglas de Cobro{% endblock %}
+{% block page_title %}Gestión de Reglas de Cobro{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <div class="d-flex gap-2">
+    <select class="form-select form-select-sm" style="width:200px" id="filtPeriodo">
+      <option value="">Todos los períodos</option>
+    </select>
+    <select class="form-select form-select-sm" style="width:200px" id="filtPrograma">
+      <option value="">Todos los programas</option>
+    </select>
+    <button class="btn btn-sm btn-outline-secondary" onclick="cargarReglas()"><i class="bi bi-search"></i> Filtrar</button>
+  </div>
+  <button class="btn btn-uc btn-sm" onclick="abrirModal()"><i class="bi bi-plus me-1"></i>Nueva Regla</button>
+</div>
+
+<div class="card">
+  <div class="card-body p-0">
+    <table class="table table-hover mb-0" id="tblReglas">
+      <thead class="table-dark">
+        <tr><th>Período</th><th>Programa</th><th>Modalidad</th><th>Valor</th><th>Acciones</th></tr>
+      </thead>
+      <tbody><tr><td colspan="5" class="text-center py-3 text-muted">Cargando...</td></tr></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Modal Nueva/Editar Regla -->
+<div class="modal fade" id="modal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header bg-primary text-white">
+        <h5 class="modal-title" id="modalTitulo">Nueva Regla de Cobro</h5>
+        <button class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="recId"/>
+        <div class="mb-3">
+          <label class="form-label">Período *</label>
+          <select class="form-select" id="rPeriodo"><option value="">Seleccionar...</option></select>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Programa *</label>
+          <select class="form-select" id="rPrograma"><option value="">Seleccionar...</option></select>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Modalidad *</label>
+          <select class="form-select" id="rModalidad">
+            <option value="GLOBAL">GLOBAL — Valor fijo por programa</option>
+            <option value="POR_CREDITOS">POR_CREDITOS — Valor por crédito</option>
+          </select>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Valor ($) *</label>
+          <input class="form-control" type="number" id="rValor" min="1" step="0.01"/>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button class="btn btn-primary" onclick="guardar()">Guardar</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let reglas=[], periodos=[], programas=[];
+const m=new bootstrap.Modal(document.getElementById('modal'));
+
+async function cargarTodo() {
+  [reglas, periodos, programas] = await Promise.all([
+    api('GET','/reglas/'),
+    api('GET','/periodos/'),
+    api('GET','/programas/')
+  ]);
+  render();
+  // Poblar selects
+  const sp=document.getElementById('filtPeriodo');
+  periodos.forEach(p=>sp.appendChild(new Option(p.codigo,p.id_periodo)));
+  const spg=document.getElementById('filtPrograma');
+  programas.forEach(p=>spg.appendChild(new Option(p.nombre,p.id_programa)));
+  const rp=document.getElementById('rPeriodo');
+  periodos.forEach(p=>rp.appendChild(new Option(p.codigo,p.id_periodo)));
+  const rpg=document.getElementById('rPrograma');
+  programas.forEach(p=>rpg.appendChild(new Option(p.nombre,p.id_programa)));
+}
+
+function render(){
+  const idP=document.getElementById('filtPeriodo').value;
+  const idPg=document.getElementById('filtPrograma').value;
+  const rows=reglas.filter(r=>{
+    const matchP=idP?String(r.id_periodo)===String(idP):true;
+    const matchPg=idPg?String(r.id_programa)===String(idPg):true;
+    return matchP&&matchPg;
+  });
+  document.querySelector('#tblReglas tbody').innerHTML=rows.length===0?
+    '<tr><td colspan="5" class="text-center text-muted py-3">Sin resultados</td></tr>':
+    rows.map(r=>`<tr>
+      <td><span class="badge bg-secondary">${r.codigo_periodo}</span></td>
+      <td>${r.nombre_programa}</td>
+      <td><span class="badge ${r.modalidad==='GLOBAL'?'bg-info':'bg-success'}">${r.modalidad}</span></td>
+      <td>${fmtMoney(r.valor)}</td>
+      <td>
+        <button class="btn btn-sm btn-outline-primary me-1" onclick="editar(${r.id_regla})"><i class="bi bi-pencil"></i></button>
+        <button class="btn btn-sm btn-outline-danger" onclick="eliminar(${r.id_regla})"><i class="bi bi-trash"></i></button>
+      </td>
+    </tr>`).join('');
+}
+
+function abrirModal(){
+  document.getElementById('recId').value='';
+  document.getElementById('modalTitulo').textContent='Nueva Regla de Cobro';
+  ['rPeriodo','rPrograma','rValor'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('rModalidad').value='GLOBAL';
+  m.show();
+}
+
+async function editar(id){
+  const r=reglas.find(x=>x.id_regla===id);
+  document.getElementById('recId').value=r.id_regla;
+  document.getElementById('modalTitulo').textContent='Editar Regla de Cobro';
+  document.getElementById('rPeriodo').value=r.id_periodo;
+  document.getElementById('rPrograma').value=r.id_programa;
+  document.getElementById('rModalidad').value=r.modalidad;
+  document.getElementById('rValor').value=r.valor;
+  m.show();
+}
+
+async function guardar(){
+  const id=document.getElementById('recId').value;
+  const body={
+    id_periodo:parseInt(document.getElementById('rPeriodo').value),
+    id_programa:parseInt(document.getElementById('rPrograma').value),
+    modalidad:document.getElementById('rModalidad').value,
+    valor:parseFloat(document.getElementById('rValor').value)
+  };
+  try{
+    if(id) await api('PUT',`/reglas/${id}`,body);
+    else await api('POST','/reglas/',body);
+    showToast('Regla guardada');
+    m.hide();
+    reglas=await api('GET','/reglas/');
+    render();
+  }catch(e){showToast(e.message,'danger');}
+}
+
+async function eliminar(id){
+  if(!confirm('¿Eliminar regla?'))return;
+  try{
+    await api('DELETE',`/reglas/${id}`);
+    showToast('Regla eliminada','warning');
+    reglas=await api('GET','/reglas/');
+    render();
+  }catch(e){showToast(e.message,'danger');}
+}
+
+async function cargarReglas(){
+  render();
+}
+
+cargarTodo();
+</script>
+{% endblock %}

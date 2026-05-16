@@ -1,0 +1,270 @@
+<!--
+programas page con pensum y plan de estudio 
+-->
+
+{% extends "base.html" %}
+{% block title %}Programas{% endblock %}
+{% block page_title %}Programas Académicos{% endblock %}
+
+{% block content %}
+<div class="row g-3">
+  <!-- Lista de programas -->
+  <div class="col-lg-5">
+    <div class="d-flex justify-content-between align-items-center mb-2">
+      <h6 class="mb-0 fw-semibold">Programas</h6>
+      <button class="btn btn-uc btn-sm" onclick="abrirModalProg()"><i class="bi bi-plus me-1"></i>Nuevo</button>
+    </div>
+    <div class="card">
+      <div class="card-body p-0">
+        <table class="table table-hover mb-0" id="tblProg">
+          <thead class="table-dark"><tr><th>Código</th><th>Nombre</th><th>Nivel</th><th></th></tr></thead>
+          <tbody><tr><td colspan="4" class="text-center py-3 text-muted">Cargando...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pensum del programa seleccionado -->
+  <div class="col-lg-7" id="panelPensum" style="display:none">
+    <div class="d-flex justify-content-between align-items-center mb-2">
+      <h6 class="mb-0 fw-semibold">Pensum de <span id="nombreProgSel" class="text-primary"></span></h6>
+      <button class="btn btn-success btn-sm" onclick="abrirModalPensum()"><i class="bi bi-plus me-1"></i>Nuevo Pensum</button>
+    </div>
+    <div class="card mb-3">
+      <div class="card-body p-0">
+        <table class="table table-sm mb-0" id="tblPensum">
+          <thead class="table-light"><tr><th>Versión</th><th>Semestres</th><th>Vigencia</th><th></th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Plan de estudio del pensum seleccionado -->
+    <div id="panelPlan" style="display:none">
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <h6 class="mb-0 fw-semibold">Plan de estudio — Pensum <span id="verPensumSel" class="badge bg-success"></span></h6>
+        <button class="btn btn-warning btn-sm" onclick="abrirModalAgregarAsig()"><i class="bi bi-plus me-1"></i>Agregar Asignatura</button>
+      </div>
+      <div id="planContent"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Programa -->
+<div class="modal fade" id="modalProg" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header bg-primary text-white">
+        <h5 class="modal-title" id="modalProgTitulo">Nuevo Programa</h5>
+        <button class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="progId"/>
+        <div class="mb-3"><label class="form-label">Código *</label><input class="form-control" id="pCodigo"/></div>
+        <div class="mb-3"><label class="form-label">Nombre *</label><input class="form-control" id="pNombre"/></div>
+        <div class="mb-3">
+          <label class="form-label">Nivel *</label>
+          <select class="form-select" id="pNivel">
+            <option value="PREGRADO">Pregrado</option>
+            <option value="POSGRADO">Posgrado</option>
+          </select>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button class="btn btn-primary" onclick="guardarPrograma()">Guardar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Pensum -->
+<div class="modal fade" id="modalPensum" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header bg-success text-white">
+        <h5 class="modal-title">Nuevo Pensum</h5>
+        <button class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3"><label class="form-label">Versión *</label><input class="form-control" id="penVersion" placeholder="Ej: 2024-A"/></div>
+        <div class="mb-3"><label class="form-label">Total Semestres *</label><input class="form-control" type="number" id="penSem" min="1" max="20"/></div>
+        <div class="mb-3"><label class="form-label">Fecha Vigencia *</label><input class="form-control" type="date" id="penFecha"/></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button class="btn btn-success" onclick="guardarPensum()">Guardar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Agregar Asignatura al Pensum -->
+<div class="modal fade" id="modalAgregarAsig" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header bg-warning">
+        <h5 class="modal-title">Agregar Asignatura al Pensum</h5>
+        <button class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3">
+          <label class="form-label">Asignatura *</label>
+          <select class="form-select" id="asigSel"></select>
+        </div>
+        <div class="mb-3"><label class="form-label">Semestre *</label><input class="form-control" type="number" id="asigSem" min="1"/></div>
+        <div class="mb-3">
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" id="asigOblig" checked/>
+            <label class="form-check-label">Obligatoria</label>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button class="btn btn-warning" onclick="agregarAsigPensum()">Agregar</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let progSel=null, pensumSel=null;
+const mProg=new bootstrap.Modal(document.getElementById('modalProg'));
+const mPen=new bootstrap.Modal(document.getElementById('modalPensum'));
+const mAsig=new bootstrap.Modal(document.getElementById('modalAgregarAsig'));
+
+async function cargarProgramas(){
+  const progs=await api('GET','/programas/?activos=false');
+  document.querySelector('#tblProg tbody').innerHTML=progs.length===0?
+    '<tr><td colspan="4" class="text-center text-muted py-3">Sin programas</td></tr>':
+    progs.map(p=>`<tr style="cursor:pointer" onclick="selPrograma(${p.id_programa},'${p.nombre}')">
+      <td><span class="badge bg-primary">${p.codigo}</span></td>
+      <td>${p.nombre}</td>
+      <td><span class="badge ${p.nivel==='PREGRADO'?'bg-info text-dark':'bg-purple'}">${p.nivel}</span></td>
+      <td>
+        <button class="btn btn-xs btn-sm btn-outline-primary me-1" onclick="event.stopPropagation();editarPrograma(${p.id_programa})"><i class="bi bi-pencil"></i></button>
+        <button class="btn btn-xs btn-sm btn-outline-danger" onclick="event.stopPropagation();eliminarPrograma(${p.id_programa})"><i class="bi bi-trash"></i></button>
+      </td>
+    </tr>`).join('');
+}
+
+async function selPrograma(id, nombre){
+  progSel=id;
+  document.getElementById('nombreProgSel').textContent=nombre;
+  document.getElementById('panelPensum').style.display='';
+  document.getElementById('panelPlan').style.display='none';
+  await cargarPensum(id);
+}
+
+async function cargarPensum(id){
+  const pens=await api('GET',`/pensum/programa/${id}`);
+  document.querySelector('#tblPensum tbody').innerHTML=pens.length===0?
+    '<tr><td colspan="4" class="text-center text-muted">Sin pensum</td></tr>':
+    pens.map(p=>`<tr style="cursor:pointer" onclick="verPlan(${p.id_pensum},'${p.version}')">
+      <td><span class="badge bg-success">${p.version}</span></td>
+      <td>${p.total_semestres} semestres</td>
+      <td>${fmtDate(p.fecha_vigencia)}</td>
+      <td><button class="btn btn-sm btn-outline-primary" onclick="event.stopPropagation();verPlan(${p.id_pensum},'${p.version}')"><i class="bi bi-eye"></i> Plan</button></td>
+    </tr>`).join('');
+}
+
+async function verPlan(id,ver){
+  pensumSel=id;
+  document.getElementById('verPensumSel').textContent=ver;
+  document.getElementById('panelPlan').style.display='';
+  const plan=await api('GET',`/asignaturas/pensum/${id}/plan`);
+  const agrupado={};
+  plan.forEach(a=>{ if(!agrupado[a.semestre]) agrupado[a.semestre]=[]; agrupado[a.semestre].push(a); });
+  const html=Object.keys(agrupado).sort((a,b)=>a-b).map(sem=>`
+    <div class="card mb-2">
+      <div class="card-header py-2 bg-secondary text-white fw-semibold">Semestre ${sem}</div>
+      <div class="card-body p-0">
+        <table class="table table-sm mb-0">
+          <thead class="table-light"><tr><th>Código</th><th>Asignatura</th><th>Créditos</th><th>Tipo</th><th>Prerequisitos</th><th></th></tr></thead>
+          <tbody>${agrupado[sem].map(a=>`<tr>
+            <td>${a.codigo}</td><td>${a.nombre}</td>
+            <td><span class="badge bg-primary">${a.creditos}</span></td>
+            <td>${a.obligatoria?'<span class="badge bg-success">Obligatoria</span>':'<span class="badge bg-warning text-dark">Electiva</span>'}</td>
+            <td>${a.prerequisitos.map(p=>`<span class="badge bg-light text-dark border">${p.codigo}</span>`).join(' ')||'—'}</td>
+            <td><button class="btn btn-xs btn-sm btn-outline-danger" onclick="quitarAsig(${id},${a.id_asignatura})"><i class="bi bi-x"></i></button></td>
+          </tr>`).join('')}</tbody>
+        </table>
+      </div>
+    </div>`).join('') || '<p class="text-muted">Sin asignaturas en este pensum.</p>';
+  document.getElementById('planContent').innerHTML=html;
+}
+
+function abrirModalProg(){
+  document.getElementById('progId').value='';
+  document.getElementById('modalProgTitulo').textContent='Nuevo Programa';
+  ['pCodigo','pNombre'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('pNivel').value='PREGRADO';
+  mProg.show();
+}
+
+async function editarPrograma(id){
+  const p=await api('GET',`/programas/${id}`);
+  document.getElementById('progId').value=p.id_programa;
+  document.getElementById('modalProgTitulo').textContent='Editar Programa';
+  document.getElementById('pCodigo').value=p.codigo;
+  document.getElementById('pNombre').value=p.nombre;
+  document.getElementById('pNivel').value=p.nivel;
+  mProg.show();
+}
+
+async function guardarPrograma(){
+  const id=document.getElementById('progId').value;
+  const body={codigo:document.getElementById('pCodigo').value,nombre:document.getElementById('pNombre').value,nivel:document.getElementById('pNivel').value};
+  try {
+    if(id) await api('PUT',`/programas/${id}`,body);
+    else    await api('POST','/programas/',body);
+    showToast('Programa guardado'); mProg.hide(); cargarProgramas();
+  } catch(e){ showToast(e.message,'danger'); }
+}
+
+async function eliminarPrograma(id){
+  if(!confirm('¿Desactivar este programa?')) return;
+  try { await api('DELETE',`/programas/${id}`); showToast('Desactivado','warning'); cargarProgramas(); }
+  catch(e){ showToast(e.message,'danger'); }
+}
+
+function abrirModalPensum(){
+  ['penVersion','penSem','penFecha'].forEach(id=>document.getElementById(id).value='');
+  mPen.show();
+}
+
+async function guardarPensum(){
+  const body={id_programa:progSel,version:document.getElementById('penVersion').value,
+    total_semestres:parseInt(document.getElementById('penSem').value),
+    fecha_vigencia:document.getElementById('penFecha').value};
+  try { await api('POST','/pensum/',body); showToast('Pensum creado'); mPen.hide(); cargarPensum(progSel); }
+  catch(e){ showToast(e.message,'danger'); }
+}
+
+async function abrirModalAgregarAsig(){
+  const asigs=await api('GET','/asignaturas/');
+  const sel=document.getElementById('asigSel');
+  sel.innerHTML=asigs.map(a=>`<option value="${a.id_asignatura}">${a.codigo} — ${a.nombre} (${a.creditos} cr.)</option>`).join('');
+  mAsig.show();
+}
+
+async function agregarAsigPensum(){
+  const body={id_asignatura:parseInt(document.getElementById('asigSel').value),
+    semestre:parseInt(document.getElementById('asigSem').value),
+    obligatoria:document.getElementById('asigOblig').checked};
+  try { await api('POST',`/asignaturas/pensum/${pensumSel}`,body); showToast('Asignatura agregada'); mAsig.hide(); verPlan(pensumSel,document.getElementById('verPensumSel').textContent); }
+  catch(e){ showToast(e.message,'danger'); }
+}
+
+async function quitarAsig(idPensum,idAsig){
+  if(!confirm('¿Quitar esta asignatura del pensum?')) return;
+  try { await api('DELETE',`/asignaturas/pensum/${idPensum}/${idAsig}`); showToast('Quitada','warning'); verPlan(idPensum,document.getElementById('verPensumSel').textContent); }
+  catch(e){ showToast(e.message,'danger'); }
+}
+
+cargarProgramas();
+</script>
+{% endblock %}

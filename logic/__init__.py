@@ -1,0 +1,1 @@
+#este archivo __init__.py Le dice a python que esta carpeta (logic) es un paquete (un módulo importable), no una carpeta cualquiera.

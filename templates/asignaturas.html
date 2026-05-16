@@ -1,0 +1,74 @@
+<!--
+asignaturas page con periodos, reglas, codigos, inscripciones, reportes, usuarios y roles templates 
+-->
+
+{% extends "base.html" %}
+{% block title %}Asignaturas{% endblock %}
+{% block page_title %}Gestión de Asignaturas{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <input id="filtro" class="form-control form-control-sm" style="width:220px" placeholder="Buscar..."/>
+  <button class="btn btn-uc btn-sm" onclick="abrirModal()"><i class="bi bi-plus me-1"></i>Nueva Asignatura</button>
+</div>
+<div class="card">
+  <div class="card-body p-0">
+    <table class="table table-hover mb-0" id="tbl">
+      <thead class="table-dark"><tr><th>Código</th><th>Nombre</th><th>Créditos</th><th>Acciones</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+</div>
+
+<div class="modal fade" id="modal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header bg-primary text-white">
+        <h5 class="modal-title" id="modalTitulo">Nueva Asignatura</h5>
+        <button class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="recId"/>
+        <div class="mb-3"><label class="form-label">Código *</label><input class="form-control" id="fCodigo"/></div>
+        <div class="mb-3"><label class="form-label">Nombre *</label><input class="form-control" id="fNombre"/></div>
+        <div class="mb-3"><label class="form-label">Créditos *</label><input class="form-control" type="number" id="fCreditos" min="1"/></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button class="btn btn-primary" onclick="guardar()">Guardar</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script>
+let datos=[];
+const m=new bootstrap.Modal(document.getElementById('modal'));
+async function cargar(){ datos=await api('GET','/asignaturas/'); render(); }
+function render(){
+  const q=document.getElementById('filtro').value.toLowerCase();
+  const rows=datos.filter(d=>(d.nombre+d.codigo).toLowerCase().includes(q));
+  document.querySelector('#tbl tbody').innerHTML=rows.length===0?
+    '<tr><td colspan="4" class="text-center text-muted py-3">Sin resultados</td></tr>':
+    rows.map(d=>`<tr>
+      <td><span class="badge bg-secondary">${d.codigo}</span></td>
+      <td>${d.nombre}</td>
+      <td><span class="badge bg-primary">${d.creditos}</span></td>
+      <td>
+        <button class="btn btn-sm btn-outline-primary me-1" onclick="editar(${d.id_asignatura})"><i class="bi bi-pencil"></i></button>
+        <button class="btn btn-sm btn-outline-danger" onclick="eliminar(${d.id_asignatura})"><i class="bi bi-trash"></i></button>
+      </td>
+    </tr>`).join('');
+}
+function abrirModal(){document.getElementById('recId').value='';document.getElementById('modalTitulo').textContent='Nueva Asignatura';['fCodigo','fNombre','fCreditos'].forEach(id=>document.getElementById(id).value='');m.show();}
+async function editar(id){const d=await api('GET',`/asignaturas/${id}`);document.getElementById('recId').value=d.id_asignatura;document.getElementById('modalTitulo').textContent='Editar Asignatura';document.getElementById('fCodigo').value=d.codigo;document.getElementById('fNombre').value=d.nombre;document.getElementById('fCreditos').value=d.creditos;m.show();}
+async function guardar(){
+  const id=document.getElementById('recId').value;
+  const body={codigo:document.getElementById('fCodigo').value,nombre:document.getElementById('fNombre').value,creditos:parseInt(document.getElementById('fCreditos').value)};
+  try{if(id)await api('PUT',`/asignaturas/${id}`,body);else await api('POST','/asignaturas/',body);showToast('Guardado');m.hide();cargar();}catch(e){showToast(e.message,'danger');}
+}
+async function eliminar(id){if(!confirm('¿Eliminar asignatura?'))return;try{await api('DELETE',`/asignaturas/${id}`);showToast('Eliminada','warning');cargar();}catch(e){showToast(e.message,'danger');}}
+document.getElementById('filtro').addEventListener('input',render);
+cargar();
+</script>
+{% endblock %}

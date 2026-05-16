@@ -1,0 +1,130 @@
+<!--
+pagina de roles y pagina 403
+-->
+
+
+{% extends "base.html" %}
+{% block title %}Roles{% endblock %}
+{% block page_title %}Gestión de Roles{% endblock %}
+
+{% block content %}
+<div class="row g-3">
+  <div class="col-lg-5">
+    <div class="d-flex justify-content-between align-items-center mb-2">
+      <h6 class="fw-semibold mb-0">Roles del Sistema</h6>
+      <button class="btn btn-uc btn-sm" onclick="abrirModal()"><i class="bi bi-plus me-1"></i>Nuevo Rol</button>
+    </div>
+    <div class="card">
+      <div class="card-body p-0">
+        <table class="table table-hover mb-0" id="tblRoles">
+          <thead class="table-dark"><tr><th>Nombre</th><th>Descripción</th><th>Acciones</th></tr></thead>
+          <tbody><tr><td colspan="3" class="text-center text-muted py-3">Cargando...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-7" id="panelMenus" style="display:none">
+    <div class="d-flex justify-content-between align-items-center mb-2">
+      <h6 class="fw-semibold mb-0">Menús asignados a <span id="rolSelNombre" class="text-primary"></span></h6>
+    </div>
+    <div class="card mb-3">
+      <div class="card-body p-0">
+        <table class="table table-sm mb-0" id="tblMenusRol">
+          <thead class="table-light"><tr><th>Menú</th><th>Ruta</th><th></th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header">Asignar Menú</div>
+      <div class="card-body">
+        <div class="d-flex gap-2">
+          <select class="form-select" id="selMenu"></select>
+          <button class="btn btn-success" onclick="asignarMenu()"><i class="bi bi-plus"></i> Asignar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="modal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header bg-primary text-white">
+        <h5 class="modal-title" id="modalTitulo">Nuevo Rol</h5>
+        <button class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="recId"/>
+        <div class="mb-3"><label class="form-label">Nombre *</label><input class="form-control" id="fNombre"/></div>
+        <div class="mb-3"><label class="form-label">Descripción</label><textarea class="form-control" id="fDesc" rows="2"></textarea></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button class="btn btn-primary" onclick="guardar()">Guardar</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let roles=[], menus=[], rolSel=null;
+const m=new bootstrap.Modal(document.getElementById('modal'));
+
+async function cargar(){
+  [roles, menus]=await Promise.all([api('GET','/seguridad/roles/'),api('GET','/seguridad/menus/')]);
+  renderRoles();
+  const sm=document.getElementById('selMenu');
+  sm.innerHTML=menus.map(m=>`<option value="${m.id_menu}">${m.nombre} (${m.ruta||'—'})</option>`).join('');
+}
+
+function renderRoles(){
+  document.querySelector('#tblRoles tbody').innerHTML=roles.length===0?
+    '<tr><td colspan="3" class="text-center text-muted py-3">Sin roles</td></tr>':
+    roles.map(r=>`<tr style="cursor:pointer" onclick="selRol(${r.id_rol},'${r.nombre}')">
+      <td><span class="badge ${r.nombre==='ADMINISTRADOR'?'bg-danger':r.nombre==='SUPERVISOR'?'bg-warning text-dark':'bg-success'}">${r.nombre}</span></td>
+      <td class="small text-muted">${r.descripcion||'—'}</td>
+      <td>
+        <button class="btn btn-sm btn-outline-primary me-1" onclick="event.stopPropagation();editar(${r.id_rol})"><i class="bi bi-pencil"></i></button>
+        <button class="btn btn-sm btn-outline-danger" onclick="event.stopPropagation();eliminar(${r.id_rol})"><i class="bi bi-trash"></i></button>
+      </td>
+    </tr>`).join('');
+}
+
+async function selRol(id, nombre){
+  rolSel=id;
+  document.getElementById('rolSelNombre').textContent=nombre;
+  document.getElementById('panelMenus').style.display='';
+  const menusRol=await api('GET',`/seguridad/menus/rol/${id}`);
+  document.querySelector('#tblMenusRol tbody').innerHTML=menusRol.length===0?
+    '<tr><td colspan="3" class="text-center text-muted">Sin menús asignados</td></tr>':
+    menusRol.map(m=>`<tr>
+      <td>${m.nombre}</td><td><code>${m.ruta||'—'}</code></td>
+      <td><button class="btn btn-sm btn-outline-danger" onclick="quitarMenu(${id},${m.id_menu})"><i class="bi bi-x"></i></button></td>
+    </tr>`).join('');
+}
+
+async function asignarMenu(){
+  const idMenu=document.getElementById('selMenu').value;
+  try{await api('POST',`/seguridad/menus/rol/${rolSel}/${idMenu}`,{});showToast('Menú asignado');selRol(rolSel,document.getElementById('rolSelNombre').textContent);}
+  catch(e){showToast(e.message,'danger');}
+}
+
+async function quitarMenu(idRol,idMenu){
+  try{await api('DELETE',`/seguridad/menus/rol/${idRol}/${idMenu}`);showToast('Menú quitado','warning');selRol(idRol,document.getElementById('rolSelNombre').textContent);}
+  catch(e){showToast(e.message,'danger');}
+}
+
+function abrirModal(){document.getElementById('recId').value='';document.getElementById('modalTitulo').textContent='Nuevo Rol';['fNombre','fDesc'].forEach(id=>document.getElementById(id).value='');m.show();}
+async function editar(id){const r=roles.find(x=>x.id_rol===id);document.getElementById('recId').value=r.id_rol;document.getElementById('modalTitulo').textContent='Editar Rol';document.getElementById('fNombre').value=r.nombre;document.getElementById('fDesc').value=r.descripcion||'';m.show();}
+async function guardar(){
+  const id=document.getElementById('recId').value;
+  const body={nombre:document.getElementById('fNombre').value,descripcion:document.getElementById('fDesc').value};
+  try{if(id)await api('PUT',`/seguridad/roles/${id}`,body);else await api('POST','/seguridad/roles/',body);showToast('Guardado');m.hide();cargar();}catch(e){showToast(e.message,'danger');}
+}
+async function eliminar(id){if(!confirm('¿Eliminar rol?'))return;try{await api('DELETE',`/seguridad/roles/${id}`);showToast('Eliminado','warning');cargar();}catch(e){showToast(e.message,'danger');}}
+cargar();
+</script>
+{% endblock %}

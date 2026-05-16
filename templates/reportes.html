@@ -1,0 +1,146 @@
+{% extends "base.html" %}
+{% block title %}Reportes{% endblock %}
+{% block page_title %}Reportes de Gestión{% endblock %}
+
+{% block content %}
+<div class="row g-3 mb-3">
+  <div class="col-md-4">
+    <label class="form-label fw-semibold">Período Académico</label>
+    <select class="form-select" id="selPeriodo"><option value="">Seleccionar período...</option></select>
+  </div>
+  <div class="col-md-4" id="filtProgramaDiv">
+    <label class="form-label fw-semibold">Programa (Reporte 3)</label>
+    <select class="form-select" id="selPrograma"><option value="">Seleccionar...</option></select>
+  </div>
+</div>
+
+<div class="row g-3" id="botonesReporte">
+  <div class="col-6 col-md-4 col-lg-2">
+    <button class="btn btn-outline-primary w-100 py-3" onclick="cargarReporte(1)">
+      <i class="bi bi-people-fill d-block fs-3 mb-1"></i>
+      <span class="small">Estudiantes con Cobro</span>
+    </button>
+  </div>
+  <div class="col-6 col-md-4 col-lg-2">
+    <button class="btn btn-outline-success w-100 py-3" onclick="cargarReporte(2)">
+      <i class="bi bi-graph-up d-block fs-3 mb-1"></i>
+      <span class="small">Ingreso Esperado</span>
+    </button>
+  </div>
+  <div class="col-6 col-md-4 col-lg-2">
+    <button class="btn btn-outline-danger w-100 py-3" onclick="cargarReporte(3)">
+      <i class="bi bi-exclamation-circle d-block fs-3 mb-1"></i>
+      <span class="small">Pendientes de Pago</span>
+    </button>
+  </div>
+  <div class="col-6 col-md-4 col-lg-2">
+    <button class="btn btn-outline-warning w-100 py-3" onclick="cargarReporte(4)">
+      <i class="bi bi-cash-stack d-block fs-3 mb-1"></i>
+      <span class="small">Ingreso Real</span>
+    </button>
+  </div>
+  <div class="col-6 col-md-4 col-lg-2">
+    <button class="btn btn-outline-info w-100 py-3" onclick="cargarReporte(5)">
+      <i class="bi bi-credit-card d-block fs-3 mb-1"></i>
+      <span class="small">Crédito Financiero</span>
+    </button>
+  </div>
+</div>
+
+<div class="mt-4" id="reporteResult" style="display:none">
+  <div class="d-flex justify-content-between align-items-center mb-2">
+    <h6 class="fw-bold mb-0" id="reporteTitulo"></h6>
+    <div>
+      <span class="badge bg-secondary me-2" id="reporteTotal"></span>
+      <button class="btn btn-sm btn-outline-secondary" onclick="exportCSV()"><i class="bi bi-download me-1"></i>CSV</button>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-body p-0">
+      <div class="table-responsive"><table class="table table-hover mb-0" id="tblReporte">
+        <thead class="table-dark" id="theadReporte"></thead>
+        <tbody id="tbodyReporte"></tbody>
+        <tfoot id="tfootReporte" class="table-warning fw-bold"></tfoot>
+      </table></div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let reporteActual=[], reporteNum=0;
+const titulos=['','Listado de Estudiantes con Cobro','Ingreso Esperado por Período y Programa','Estudiantes Pendientes de Pago','Ingreso Real Recibido','Estudiantes con Crédito Financiero'];
+
+async function init(){
+  const [periodos,programas]=await Promise.all([api('GET','/periodos/'),api('GET','/programas/')]);
+  const sp=document.getElementById('selPeriodo');
+  periodos.forEach(p=>sp.appendChild(new Option(`${p.codigo} — ${p.descripcion||''}`,p.id_periodo)));
+  const spg=document.getElementById('selPrograma');
+  programas.forEach(p=>spg.appendChild(new Option(p.nombre,p.id_programa)));
+}
+
+async function cargarReporte(n){
+  const pid=document.getElementById('selPeriodo').value;
+  if(!pid){showToast('Seleccione un período','warning');return;}
+  reporteNum=n;
+  let data, thead='', foot='';
+  const prid=document.getElementById('selPrograma').value;
+  if(n===3&&!prid){showToast('Para el Reporte 3 seleccione un programa','warning');return;}
+  const urls=[null,
+    `/reportes/estudiantes-cobro?id_periodo=${pid}`,
+    `/reportes/ingreso-esperado?id_periodo=${pid}`,
+    `/reportes/pendientes-pago?id_periodo=${pid}&id_programa=${prid}`,
+    `/reportes/ingreso-real?id_periodo=${pid}`,
+    `/reportes/credito-financiero?id_periodo=${pid}`,
+  ];
+  data=await api('GET',urls[n]);
+  reporteActual=data;
+  document.getElementById('reporteTitulo').textContent=titulos[n];
+  document.getElementById('reporteTotal').textContent=`${data.length} registro(s)`;
+  let rows='';
+  if(n===1){
+    thead='<tr><th>Código</th><th>Nombre</th><th>Programa</th><th>Modalidad</th><th>Semestre</th><th>Monto Cobrado</th></tr>';
+    rows=data.map(d=>`<tr><td>${d.codigo_estudiantil}</td><td>${d.nombre}</td><td>${d.programa}</td><td><span class="badge ${d.modalidad_cobro==='GLOBAL'?'bg-primary':'bg-warning text-dark'}">${d.modalidad_cobro}</span></td><td>${d.semestre_a_cursar}</td><td class="text-end">${fmtMoney(d.monto_cobrado)}</td></tr>`).join('');
+    const tot=data.reduce((s,d)=>s+parseFloat(d.monto_cobrado||0),0);
+    foot=`<tr><td colspan="5" class="text-end">TOTAL</td><td class="text-end">${fmtMoney(tot)}</td></tr>`;
+  } else if(n===2){
+    thead='<tr><th>Programa</th><th>Modalidad</th><th>Estudiantes</th><th>Ingreso Esperado</th></tr>';
+    rows=data.map(d=>`<tr><td>${d.programa}</td><td>${d.modalidad_cobro}</td><td>${d.num_estudiantes}</td><td class="text-end">${fmtMoney(d.ingreso_esperado)}</td></tr>`).join('');
+    const tot=data.reduce((s,d)=>s+parseFloat(d.ingreso_esperado||0),0);
+    foot=`<tr><td colspan="3" class="text-end">TOTAL</td><td class="text-end">${fmtMoney(tot)}</td></tr>`;
+  } else if(n===3){
+    thead='<tr><th>Código</th><th>Nombre</th><th>Programa</th><th>Modalidad</th><th>Cobrado</th><th>Pagado</th><th>Saldo</th></tr>';
+    rows=data.map(d=>`<tr><td>${d.codigo_estudiantil}</td><td>${d.nombre}</td><td>${d.programa}</td><td>${d.modalidad_cobro}</td><td>${fmtMoney(d.total_cobrado)}</td><td>${fmtMoney(d.total_pagado)}</td><td class="text-danger fw-bold">${fmtMoney(d.saldo_pendiente)}</td></tr>`).join('');
+    const tot=data.reduce((s,d)=>s+parseFloat(d.saldo_pendiente||0),0);
+    foot=`<tr><td colspan="6" class="text-end">TOTAL PENDIENTE</td><td class="text-end text-danger">${fmtMoney(tot)}</td></tr>`;
+  } else if(n===4){
+    thead='<tr><th>Programa</th><th>Estudiantes</th><th>Ingreso Real</th></tr>';
+    rows=data.map(d=>`<tr><td>${d.programa}</td><td>${d.num_estudiantes}</td><td class="text-end">${fmtMoney(d.ingreso_real)}</td></tr>`).join('');
+    const tot=data.reduce((s,d)=>s+parseFloat(d.ingreso_real||0),0);
+    foot=`<tr><td colspan="2" class="text-end">TOTAL</td><td class="text-end">${fmtMoney(tot)}</td></tr>`;
+  } else if(n===5){
+    thead='<tr><th>Código</th><th>Nombre</th><th>Programa</th><th>Valor Crédito</th></tr>';
+    rows=data.map(d=>`<tr><td>${d.codigo_estudiantil}</td><td>${d.nombre}</td><td>${d.programa}</td><td class="text-end">${fmtMoney(d.valor_credito)}</td></tr>`).join('');
+    const tot=data.reduce((s,d)=>s+parseFloat(d.valor_credito||0),0);
+    foot=`<tr><td colspan="3" class="text-end">TOTAL CARTERA</td><td class="text-end">${fmtMoney(tot)}</td></tr>`;
+  }
+  document.getElementById('theadReporte').innerHTML=thead;
+  document.getElementById('tbodyReporte').innerHTML=rows||'<tr><td colspan="10" class="text-center text-muted py-3">Sin datos para este período</td></tr>';
+  document.getElementById('tfootReporte').innerHTML=foot;
+  document.getElementById('reporteResult').style.display='';
+}
+
+function exportCSV(){
+  if(!reporteActual.length){return;}
+  const keys=Object.keys(reporteActual[0]);
+  const csv=[keys.join(','),...reporteActual.map(r=>keys.map(k=>JSON.stringify(r[k]??'')).join(','))].join('\n');
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));
+  a.download=`reporte_${reporteNum}_${Date.now()}.csv`;
+  a.click();
+}
+
+init();
+</script>
+{% endblock %}

@@ -1,0 +1,265 @@
+<!--
+pagina para inscripciones individuales y masivas
+-->
+
+{% extends "base.html" %}
+{% block title %}Inscripciones{% endblock %}
+{% block page_title %}Gestión de Inscripciones{% endblock %}
+
+{% block content %}
+<ul class="nav nav-tabs mb-3" id="tabs">
+  <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tabLista">Listado</button></li>
+  <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabIndividual">Inscripción Individual</button></li>
+  <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabMasiva">Inscripción Masiva</button></li>
+</ul>
+
+<div class="tab-content">
+  <!-- LISTADO -->
+  <div class="tab-pane fade show active" id="tabLista">
+    <div class="d-flex gap-2 mb-3">
+      <select class="form-select form-select-sm" style="width:200px" id="filtPeriodo"><option value="">Todos los períodos</option></select>
+      <select class="form-select form-select-sm" style="width:200px" id="filtPrograma"><option value="">Todos los programas</option></select>
+      <button class="btn btn-sm btn-outline-secondary" onclick="cargarInscripciones()"><i class="bi bi-search"></i> Buscar</button>
+    </div>
+    <div class="card">
+      <div class="card-body p-0">
+        <table class="table table-hover mb-0" id="tblInsc">
+          <thead class="table-dark"><tr><th>Estudiante</th><th>Período</th><th>Programa</th><th>Semestre</th><th>Modalidad</th><th>Acciones</th></tr></thead>
+          <tbody><tr><td colspan="6" class="text-center text-muted py-3">Use los filtros y presione Buscar</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- INDIVIDUAL -->
+  <div class="tab-pane fade" id="tabIndividual">
+    <div class="card">
+      <div class="card-header bg-primary text-white fw-semibold"><i class="bi bi-person-check me-1"></i>Nueva Inscripción Individual</div>
+      <div class="card-body">
+        <div class="row g-3">
+          <div class="col-md-4">
+            <label class="form-label">Estudiante *</label>
+            <select class="form-select" id="iEstudiante" onchange="onEstChange()">
+              <option value="">Seleccionar...</option>
+            </select>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Período *</label>
+            <select class="form-select" id="iPeriodo"><option value="">Seleccionar...</option></select>
+          </div>
+          <div class="col-md-2">
+            <label class="form-label">Semestre *</label>
+            <input class="form-control" type="number" id="iSemestre" min="1" max="20"/>
+          </div>
+          <div class="col-md-2">
+            <label class="form-label">Modalidad *</label>
+            <select class="form-select" id="iModalidad" onchange="onModalidadChange()">
+              <option value="GLOBAL">Global</option>
+              <option value="POR_CREDITOS">Por Créditos</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Panel asignaturas (solo POR_CREDITOS) -->
+        <div id="panelAsig" style="display:none" class="mt-3">
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <h6 class="fw-semibold mb-0">Asignaturas disponibles</h6>
+            <button class="btn btn-sm btn-outline-primary" onclick="cargarAsigDisponibles()"><i class="bi bi-arrow-clockwise me-1"></i>Actualizar</button>
+          </div>
+          <div class="alert alert-info py-2 small">Seleccione las asignaturas a inscribir. Solo se muestran las disponibles según semestre y prerequisitos.</div>
+          <div id="listaAsig" class="row g-2"></div>
+          <div class="mt-2 fw-bold" id="totalCreditos">Créditos seleccionados: 0</div>
+        </div>
+
+        <div class="mt-3">
+          <button class="btn btn-success" onclick="confirmarInscripcion()"><i class="bi bi-check-circle me-1"></i>Generar Inscripción</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MASIVA -->
+  <div class="tab-pane fade" id="tabMasiva">
+    <div class="card">
+      <div class="card-header bg-warning fw-semibold"><i class="bi bi-people me-1"></i>Inscripción Masiva (Solo GLOBAL)</div>
+      <div class="card-body">
+        <div class="row g-3">
+          <div class="col-md-4">
+            <label class="form-label">Período *</label>
+            <select class="form-select" id="mPeriodo"><option value="">Seleccionar...</option></select>
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">Programa (opcional)</label>
+            <select class="form-select" id="mPrograma"><option value="">Todos los programas</option></select>
+          </div>
+          <div class="col-md-2">
+            <label class="form-label">Semestre</label>
+            <input class="form-control" type="number" id="mSemestre" value="1" min="1"/>
+          </div>
+          <div class="col-md-3 d-flex align-items-end">
+            <button class="btn btn-warning w-100" onclick="inscripcionMasiva()"><i class="bi bi-lightning me-1"></i>Generar Masiva</button>
+          </div>
+        </div>
+        <div id="resultadoMasivo" class="mt-3"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Volante -->
+<div class="modal fade" id="modalVolante" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header bg-success text-white">
+        <h5 class="modal-title"><i class="bi bi-file-text me-1"></i>Volante de Matrícula</h5>
+        <button class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body" id="volanteContent"></div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+        <button class="btn btn-success" onclick="window.print()"><i class="bi bi-printer me-1"></i>Imprimir</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let periodos=[], programas=[], estudiantes=[], asigDisp=[];
+const mVol=new bootstrap.Modal(document.getElementById('modalVolante'));
+
+async function cargarTodo(){
+  [periodos, programas, estudiantes]=await Promise.all([api('GET','/periodos/'),api('GET','/programas/'),api('GET','/estudiantes/')]);
+  // Filtros listado
+  periodos.forEach(p=>{
+    [document.getElementById('filtPeriodo'),document.getElementById('iPeriodo'),document.getElementById('mPeriodo')].forEach(s=>s.appendChild(new Option(p.codigo,p.id_periodo)));
+  });
+  programas.forEach(p=>{
+    [document.getElementById('filtPrograma'),document.getElementById('mPrograma')].forEach(s=>s.appendChild(new Option(p.nombre,p.id_programa)));
+  });
+  // Estudianttes select
+  const se=document.getElementById('iEstudiante');
+  estudiantes.forEach(e=>se.appendChild(new Option(`${e.codigo_estudiantil} — ${e.primer_nombre} ${e.apellido}`,e.id_estudiante)));
+}
+
+async function cargarInscripciones(){
+  const pid=document.getElementById('filtPeriodo').value;
+  const prid=document.getElementById('filtPrograma').value;
+  let url='/inscripciones/?';
+  if(pid) url+=`id_periodo=${pid}&`;
+  if(prid) url+=`id_programa=${prid}`;
+  const data=await api('GET',url);
+  document.querySelector('#tblInsc tbody').innerHTML=data.length===0?
+    '<tr><td colspan="6" class="text-center text-muted py-3">Sin inscripciones</td></tr>':
+    data.map(d=>`<tr>
+      <td>${d.nombre_estudiante}<br><small class="text-muted">${d.codigo_estudiantil}</small></td>
+      <td><span class="badge bg-success">${d.codigo_periodo}</span></td>
+      <td>${d.nombre_programa}</td>
+      <td>${d.semestre_a_cursar}</td>
+      <td><span class="badge ${d.modalidad_cobro==='GLOBAL'?'bg-primary':'bg-warning text-dark'}">${d.modalidad_cobro}</span></td>
+      <td><button class="btn btn-sm btn-outline-success" onclick="verVolante(${d.id_inscripcion})"><i class="bi bi-file-text"></i> Volante</button></td>
+    </tr>`).join('');
+}
+
+function onEstChange(){ if(document.getElementById('iModalidad').value==='POR_CREDITOS') cargarAsigDisponibles(); }
+function onModalidadChange(){ document.getElementById('panelAsig').style.display=document.getElementById('iModalidad').value==='POR_CREDITOS'?'':'none'; }
+
+async function cargarAsigDisponibles(){
+  const idEst=document.getElementById('iEstudiante').value;
+  const sem=document.getElementById('iSemestre').value;
+  if(!idEst||!sem){ showToast('Seleccione estudiante y semestre','warning'); return; }
+  const est=estudiantes.find(e=>e.id_estudiante==idEst);
+  asigDisp=await api('GET',`/asignaturas/disponibles?id_pensum=${est.id_pensum}&semestre_a_cursar=${sem}&id_estudiante=${idEst}`);
+  const div=document.getElementById('listaAsig');
+  if(asigDisp.length===0){ div.innerHTML='<div class="col-12"><p class="text-muted">No hay asignaturas disponibles.</p></div>'; return; }
+  div.innerHTML=asigDisp.map(a=>`<div class="col-md-4">
+    <div class="card p-2">
+      <div class="form-check">
+        <input class="form-check-input asig-check" type="checkbox" id="asig${a.id_asignatura}" value="${a.id_asignatura}" data-cred="${a.creditos}" onchange="actualizarCreditos()"/>
+        <label class="form-check-label" for="asig${a.id_asignatura}">
+          <strong>${a.nombre}</strong><br>
+          <small class="text-muted">${a.codigo} — Sem ${a.semestre} — ${a.creditos} cr.</small>
+        </label>
+      </div>
+    </div>
+  </div>`).join('');
+}
+
+function actualizarCreditos(){
+  const total=Array.from(document.querySelectorAll('.asig-check:checked')).reduce((s,c)=>s+parseInt(c.dataset.cred),0);
+  document.getElementById('totalCreditos').textContent=`Créditos seleccionados: ${total}`;
+}
+
+async function confirmarInscripcion(){
+  const body={
+    id_estudiante:parseInt(document.getElementById('iEstudiante').value),
+    id_periodo:parseInt(document.getElementById('iPeriodo').value),
+    semestre_a_cursar:parseInt(document.getElementById('iSemestre').value),
+    modalidad_cobro:document.getElementById('iModalidad').value,
+  };
+  if(body.modalidad_cobro==='POR_CREDITOS'){
+    body.ids_asignaturas=Array.from(document.querySelectorAll('.asig-check:checked')).map(c=>parseInt(c.value));
+    if(body.ids_asignaturas.length===0){ showToast('Seleccione al menos una asignatura','warning'); return; }
+  }
+  try{
+    const r=await api('POST','/inscripciones/individual',body);
+    showToast('Inscripción generada exitosamente');
+    await verVolante(r.id_inscripcion);
+  }catch(e){showToast(e.message,'danger');}
+}
+
+async function inscripcionMasiva(){
+  const body={id_periodo:parseInt(document.getElementById('mPeriodo').value),semestre_a_cursar:parseInt(document.getElementById('mSemestre').value)};
+  const pid=document.getElementById('mPrograma').value;
+  if(pid) body.id_programa=parseInt(pid);
+  if(!body.id_periodo){ showToast('Seleccione un período','warning'); return; }
+  try{
+    const r=await fetch('/inscripciones/masiva',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    const d=await r.json();
+    const div=document.getElementById('resultadoMasivo');
+    div.innerHTML=`<div class="alert alert-${d.errores.length===0?'success':'warning'}">
+      <h6>${d.mensaje}</h6>
+      ${d.exitosos.length?`<p class="mb-1"><strong>Exitosos:</strong> ${d.exitosos.map(e=>e.estudiante).join(', ')}</p>`:''}
+      ${d.errores.length?`<p class="mb-0 text-danger"><strong>Errores:</strong> ${d.errores.map(e=>`${e.estudiante}: ${e.error}`).join('; ')}</p>`:''}
+    </div>`;
+  }catch(e){showToast(e.message,'danger');}
+}
+
+async function verVolante(id){
+  const v=await api('GET',`/inscripciones/${id}/volante`);
+  const i=v.inscripcion;
+  let html=`<div class="border rounded p-3 mb-3" style="background:#f8f9fa">
+    <div class="row"><div class="col-md-6">
+      <h6 class="text-primary mb-1">Universidad del Norte</h6>
+      <p class="mb-0 small">Volante de Matrícula</p>
+    </div><div class="col-md-6 text-end">
+      <p class="mb-0"><strong>Período:</strong> ${i.codigo_periodo}</p>
+      <p class="mb-0"><strong>Fecha:</strong> ${new Date().toLocaleDateString('es-CO')}</p>
+    </div></div>
+  </div>
+  <h6>Información del Estudiante</h6>
+  <div class="row mb-3">
+    <div class="col-md-6"><strong>Estudiante:</strong> ${i.nombre_estudiante}</div>
+    <div class="col-md-6"><strong>Código:</strong> ${i.codigo_estudiantil}</div>
+    <div class="col-md-6"><strong>Programa:</strong> ${i.nombre_programa}</div>
+    <div class="col-md-6"><strong>Semestre:</strong> ${i.semestre_a_cursar}</div>
+    <div class="col-md-6"><strong>Modalidad:</strong> <span class="badge bg-primary">${i.modalidad_cobro}</span></div>
+  </div>`;
+  if(v.asignaturas.length>0){
+    html+=`<h6>Asignaturas Inscritas</h6>
+    <table class="table table-sm mb-3"><thead class="table-light"><tr><th>Asignatura</th><th>Semestre</th><th>Créditos</th></tr></thead>
+    <tbody>${v.asignaturas.map(a=>`<tr><td>${a.nombre}</td><td>${a.semestre_snapshot}</td><td>${a.creditos_snapshot}</td></tr>`).join('')}</tbody>
+    </table>`;
+  }
+  html+=`<h6>Detalle de Cobro</h6>
+  <table class="table table-sm"><thead class="table-light"><tr><th>Código</th><th>Descripción</th><th class="text-end">Monto</th></tr></thead>
+  <tbody>${v.cobros.map(c=>`<tr><td><span class="badge bg-danger">${c.codigo}</span></td><td>${c.descripcion_breve||c.desc_codigo}</td><td class="text-end fw-bold">${fmtMoney(c.monto)}</td></tr>`).join('')}
+  </tbody><tfoot><tr class="table-warning fw-bold"><td colspan="2">TOTAL A PAGAR</td><td class="text-end">${fmtMoney(v.total)}</td></tr></tfoot></table>`;
+  document.getElementById('volanteContent').innerHTML=html;
+  mVol.show();
+}
+
+cargarTodo();
+</script>
+{% endblock %}

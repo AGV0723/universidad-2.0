@@ -1,0 +1,75 @@
+<!--
+página de periodos
+-->
+
+{% extends "base.html" %}
+{% block title %}Períodos{% endblock %}
+{% block page_title %}Períodos Académicos{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-end mb-3">
+  <button class="btn btn-uc btn-sm" onclick="abrirModal()"><i class="bi bi-plus me-1"></i>Nuevo Período</button>
+</div>
+<div class="card">
+  <div class="card-body p-0">
+    <table class="table table-hover mb-0" id="tbl">
+      <thead class="table-dark"><tr><th>Código</th><th>Descripción</th><th>Inicio</th><th>Fin</th><th>Estado</th><th>Acciones</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+</div>
+
+<div class="modal fade" id="modal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header bg-primary text-white">
+        <h5 class="modal-title" id="modalTitulo">Nuevo Período</h5>
+        <button class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="recId"/>
+        <div class="mb-3"><label class="form-label">Código *</label><input class="form-control" id="fCodigo" placeholder="Ej: 2024-1"/></div>
+        <div class="mb-3"><label class="form-label">Descripción</label><input class="form-control" id="fDesc"/></div>
+        <div class="row g-2">
+          <div class="col-6"><label class="form-label">Fecha Inicio *</label><input class="form-control" type="date" id="fInicio"/></div>
+          <div class="col-6"><label class="form-label">Fecha Fin *</label><input class="form-control" type="date" id="fFin"/></div>
+        </div>
+        <div class="form-check mt-3"><input class="form-check-input" type="checkbox" id="fActivo" checked/><label class="form-check-label">Activo</label></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button class="btn btn-primary" onclick="guardar()">Guardar</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script>
+let datos=[];
+const m=new bootstrap.Modal(document.getElementById('modal'));
+async function cargar(){datos=await api('GET','/periodos/');render();}
+function render(){
+  document.querySelector('#tbl tbody').innerHTML=datos.length===0?'<tr><td colspan="6" class="text-center text-muted py-3">Sin períodos</td></tr>':
+  datos.map(d=>`<tr>
+    <td><span class="badge bg-success">${d.codigo}</span></td>
+    <td>${d.descripcion||'—'}</td>
+    <td>${fmtDate(d.fecha_inicio)}</td>
+    <td>${fmtDate(d.fecha_fin)}</td>
+    <td>${d.activo?'<span class="badge bg-success">Activo</span>':'<span class="badge bg-secondary">Inactivo</span>'}</td>
+    <td>
+      <button class="btn btn-sm btn-outline-primary me-1" onclick="editar(${d.id_periodo})"><i class="bi bi-pencil"></i></button>
+      <button class="btn btn-sm btn-outline-warning" onclick="toggleActivo(${d.id_periodo},${d.activo})">${d.activo?'<i class="bi bi-pause"></i>':'<i class="bi bi-play"></i>'}</button>
+    </td>
+  </tr>`).join('');
+}
+function abrirModal(){document.getElementById('recId').value='';document.getElementById('modalTitulo').textContent='Nuevo Período';['fCodigo','fDesc','fInicio','fFin'].forEach(id=>document.getElementById(id).value='');document.getElementById('fActivo').checked=true;m.show();}
+async function editar(id){const d=await api('GET',`/periodos/${id}`);document.getElementById('recId').value=d.id_periodo;document.getElementById('modalTitulo').textContent='Editar Período';document.getElementById('fCodigo').value=d.codigo;document.getElementById('fDesc').value=d.descripcion||'';document.getElementById('fInicio').value=d.fecha_inicio?.split('T')[0]||'';document.getElementById('fFin').value=d.fecha_fin?.split('T')[0]||'';document.getElementById('fActivo').checked=d.activo;m.show();}
+async function guardar(){
+  const id=document.getElementById('recId').value;
+  const body={codigo:document.getElementById('fCodigo').value,descripcion:document.getElementById('fDesc').value,fecha_inicio:document.getElementById('fInicio').value,fecha_fin:document.getElementById('fFin').value,activo:document.getElementById('fActivo').checked};
+  try{if(id)await api('PUT',`/periodos/${id}`,body);else await api('POST','/periodos/',body);showToast('Guardado');m.hide();cargar();}catch(e){showToast(e.message,'danger');}
+}
+async function toggleActivo(id,actual){try{await api('PUT',`/periodos/${id}`,{activo:!actual});showToast('Actualizado');cargar();}catch(e){showToast(e.message,'danger');}}
+cargar();
+</script>
+{% endblock %}

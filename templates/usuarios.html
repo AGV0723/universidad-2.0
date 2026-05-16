@@ -1,0 +1,242 @@
+<!--
+pagina de usuarios (solo admin)
+-->
+
+{% extends "base.html" %}
+{% block title %}Usuarios{% endblock %}
+{% block page_title %}Gestión de Usuarios{% endblock %}
+
+{% block content %}
+<ul class="nav nav-tabs mb-3">
+  <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tabUsuarios">Usuarios</button></li>
+  <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabPersonas">Personas</button></li>
+</ul>
+<div class="tab-content">
+
+  <!-- USUARIOS -->
+  <div class="tab-pane fade show active" id="tabUsuarios">
+    <div class="d-flex justify-content-end mb-2">
+      <button class="btn btn-uc btn-sm" onclick="abrirModalUsr()"><i class="bi bi-person-plus me-1"></i>Nuevo Usuario</button>
+    </div>
+    <div class="card">
+      <div class="card-body p-0">
+        <table class="table table-hover mb-0" id="tblUsr">
+          <thead class="table-dark"><tr><th>Username</th><th>Nombre</th><th>Correo</th><th>Rol</th><th>Estado</th><th>Acciones</th></tr></thead>
+          <tbody><tr><td colspan="6" class="text-center text-muted py-3">Cargando...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- PERSONAS -->
+  <div class="tab-pane fade" id="tabPersonas">
+    <div class="d-flex justify-content-end mb-2">
+      <button class="btn btn-success btn-sm" onclick="abrirModalPer()"><i class="bi bi-person-plus me-1"></i>Nueva Persona</button>
+    </div>
+    <div class="card">
+      <div class="card-body p-0">
+        <table class="table table-hover mb-0" id="tblPer">
+          <thead class="table-dark"><tr><th>Nombre</th><th>Documento</th><th>Correo</th><th>Teléfono</th><th>Acciones</th></tr></thead>
+          <tbody><tr><td colspan="5" class="text-center text-muted py-3">Cargando...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Usuario -->
+<div class="modal fade" id="modalUsr" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header bg-primary text-white">
+        <h5 class="modal-title" id="modalUsrTitulo">Nuevo Usuario</h5>
+        <button class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="usrId"/>
+        <div class="mb-3"><label class="form-label">Username *</label><input class="form-control" id="uUsername"/></div>
+        <div class="mb-3"><label class="form-label">Contraseña *</label><input class="form-control" type="password" id="uPass" placeholder="Dejar vacío para no cambiar"/></div>
+        <div class="mb-3"><label class="form-label">Correo *</label><input class="form-control" type="email" id="uCorreo"/></div>
+        <div class="mb-3">
+          <label class="form-label">Persona *</label>
+          <select class="form-select" id="uPersona"></select>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Rol *</label>
+          <select class="form-select" id="uRol"></select>
+        </div>
+        <div class="form-check"><input class="form-check-input" type="checkbox" id="uActivo" checked/><label class="form-check-label">Activo</label></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button class="btn btn-primary" onclick="guardarUsr()">Guardar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Persona -->
+<div class="modal fade" id="modalPer" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header bg-success text-white">
+        <h5 class="modal-title" id="modalPerTitulo">Nueva Persona</h5>
+        <button class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="perId"/>
+        <div class="row g-3">
+          <div class="col-6"><label class="form-label">Primer Nombre *</label><input class="form-control" id="perNom1"/></div>
+          <div class="col-6"><label class="form-label">Segundo Nombre</label><input class="form-control" id="perNom2"/></div>
+          <div class="col-6"><label class="form-label">Apellido *</label><input class="form-control" id="perApe1"/></div>
+          <div class="col-6"><label class="form-label">Segundo Apellido</label><input class="form-control" id="perApe2"/></div>
+          <div class="col-12"><label class="form-label">Documento *</label><input class="form-control" id="perDoc"/></div>
+          <div class="col-6"><label class="form-label">Teléfono</label><input class="form-control" id="perTel"/></div>
+          <div class="col-6"><label class="form-label">Correo</label><input class="form-control" type="email" id="perCorreo"/></div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button class="btn btn-success" onclick="guardarPer()">Guardar</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let usuarios=[], personas=[], roles=[];
+const mUsr=new bootstrap.Modal(document.getElementById('modalUsr'));
+const mPer=new bootstrap.Modal(document.getElementById('modalPer'));
+
+async function cargar(){
+  [usuarios, personas, roles]=await Promise.all([
+    api('GET','/seguridad/usuarios/'),api('GET','/seguridad/personas/'),api('GET','/seguridad/roles/')
+  ]);
+  renderUsrs(); renderPers();
+}
+
+function rolBadge(nombre){
+  const cls={'ADMINISTRADOR':'badge-admin','SUPERVISOR':'badge-supervisor','ASISTENTE':'badge-asistente'};
+  return `<span class="badge ${cls[nombre]||'bg-secondary'}">${nombre}</span>`;
+}
+
+function renderUsrs(){
+  document.querySelector('#tblUsr tbody').innerHTML=usuarios.length===0?
+    '<tr><td colspan="6" class="text-center text-muted py-3">Sin usuarios</td></tr>':
+    usuarios.map(u=>`<tr>
+      <td><strong>${u.username}</strong></td>
+      <td>${u.primer_nombre} ${u.apellido}</td>
+      <td>${u.correo}</td>
+      <td>${rolBadge(u.nombre_rol)}</td>
+      <td>${u.activo?'<span class="badge bg-success">Activo</span>':'<span class="badge bg-secondary">Inactivo</span>'}</td>
+      <td>
+        <button class="btn btn-sm btn-outline-primary me-1" onclick="editarUsr(${u.id_usuario})"><i class="bi bi-pencil"></i></button>
+        <button class="btn btn-sm btn-outline-warning" onclick="toggleUsr(${u.id_usuario},${u.activo})">${u.activo?'<i class="bi bi-pause"></i>':'<i class="bi bi-play"></i>'}</button>
+      </td>
+    </tr>`).join('');
+}
+
+function renderPers(){
+  document.querySelector('#tblPer tbody').innerHTML=personas.length===0?
+    '<tr><td colspan="5" class="text-center text-muted py-3">Sin personas</td></tr>':
+    personas.map(p=>`<tr>
+      <td>${p.primer_nombre} ${p.segundo_nombre||''} ${p.apellido} ${p.segundo_apellido||''}</td>
+      <td>${p.documento_identidad}</td>
+      <td>${p.correo||'—'}</td>
+      <td>${p.telefono||'—'}</td>
+      <td>
+        <button class="btn btn-sm btn-outline-primary me-1" onclick="editarPer(${p.id_persona})"><i class="bi bi-pencil"></i></button>
+        <button class="btn btn-sm btn-outline-danger" onclick="eliminarPer(${p.id_persona})"><i class="bi bi-trash"></i></button>
+      </td>
+    </tr>`).join('');
+}
+
+function poblarSelectsUsr(){
+  const sp=document.getElementById('uPersona');
+  sp.innerHTML=personas.map(p=>`<option value="${p.id_persona}">${p.primer_nombre} ${p.apellido} (${p.documento_identidad})</option>`).join('');
+  const sr=document.getElementById('uRol');
+  sr.innerHTML=roles.map(r=>`<option value="${r.id_rol}">${r.nombre}</option>`).join('');
+}
+
+function abrirModalUsr(){
+  document.getElementById('usrId').value='';
+  document.getElementById('modalUsrTitulo').textContent='Nuevo Usuario';
+  ['uUsername','uPass','uCorreo'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('uActivo').checked=true;
+  poblarSelectsUsr();
+  mUsr.show();
+}
+
+async function editarUsr(id){
+  const u=usuarios.find(x=>x.id_usuario===id);
+  document.getElementById('usrId').value=u.id_usuario;
+  document.getElementById('modalUsrTitulo').textContent='Editar Usuario';
+  document.getElementById('uUsername').value=u.username;
+  document.getElementById('uPass').value='';
+  document.getElementById('uCorreo').value=u.correo;
+  document.getElementById('uActivo').checked=u.activo;
+  poblarSelectsUsr();
+  document.getElementById('uPersona').value=u.id_persona;
+  document.getElementById('uRol').value=u.id_rol;
+  mUsr.show();
+}
+
+async function guardarUsr(){
+  const id=document.getElementById('usrId').value;
+  const pass=document.getElementById('uPass').value;
+  if(!id){
+    const body={username:document.getElementById('uUsername').value,password:pass,correo:document.getElementById('uCorreo').value,id_persona:parseInt(document.getElementById('uPersona').value),id_rol:parseInt(document.getElementById('uRol').value)};
+    try{await api('POST','/seguridad/usuarios/',body);showToast('Usuario creado');mUsr.hide();cargar();}catch(e){showToast(e.message,'danger');}
+  } else {
+    const body={correo:document.getElementById('uCorreo').value,id_rol:parseInt(document.getElementById('uRol').value),activo:document.getElementById('uActivo').checked};
+    if(pass) body.password=pass;
+    try{await api('PUT',`/seguridad/usuarios/${id}`,body);showToast('Usuario actualizado');mUsr.hide();cargar();}catch(e){showToast(e.message,'danger');}
+  }
+}
+
+async function toggleUsr(id,actual){
+  try{await api('PUT',`/seguridad/usuarios/${id}`,{activo:!actual});showToast('Estado actualizado');cargar();}catch(e){showToast(e.message,'danger');}
+}
+
+// PERSONAS
+function abrirModalPer(){
+  document.getElementById('perId').value='';
+  document.getElementById('modalPerTitulo').textContent='Nueva Persona';
+  ['perNom1','perNom2','perApe1','perApe2','perDoc','perTel','perCorreo'].forEach(id=>document.getElementById(id).value='');
+  mPer.show();
+}
+
+async function editarPer(id){
+  const p=await api('GET',`/seguridad/personas/${id}`);
+  document.getElementById('perId').value=p.id_persona;
+  document.getElementById('modalPerTitulo').textContent='Editar Persona';
+  document.getElementById('perNom1').value=p.primer_nombre;
+  document.getElementById('perNom2').value=p.segundo_nombre||'';
+  document.getElementById('perApe1').value=p.apellido;
+  document.getElementById('perApe2').value=p.segundo_apellido||'';
+  document.getElementById('perDoc').value=p.documento_identidad;
+  document.getElementById('perTel').value=p.telefono||'';
+  document.getElementById('perCorreo').value=p.correo||'';
+  mPer.show();
+}
+
+async function guardarPer(){
+  const id=document.getElementById('perId').value;
+  const body={primer_nombre:document.getElementById('perNom1').value,segundo_nombre:document.getElementById('perNom2').value||null,apellido:document.getElementById('perApe1').value,segundo_apellido:document.getElementById('perApe2').value||null,documento_identidad:document.getElementById('perDoc').value,telefono:document.getElementById('perTel').value||null,correo:document.getElementById('perCorreo').value||null};
+  try{
+    if(id)await api('PUT',`/seguridad/personas/${id}`,body);
+    else await api('POST','/seguridad/personas/',body);
+    showToast('Persona guardada');mPer.hide();cargar();
+  }catch(e){showToast(e.message,'danger');}
+}
+
+async function eliminarPer(id){
+  if(!confirm('¿Eliminar persona?'))return;
+  try{await api('DELETE',`/seguridad/personas/${id}`);showToast('Eliminada','warning');cargar();}catch(e){showToast(e.message,'danger');}
+}
+
+cargar();
+</script>
+{% endblock %}
