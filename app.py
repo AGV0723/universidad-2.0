@@ -48,10 +48,11 @@ app.register_blueprint(audit_bp,            url_prefix="/api/audit")
 
 @app.route("/")
 def index():
-    from flask import session
+    from flask import session, redirect
     if not session.get('usuario_id'):
-        from flask import redirect
         return redirect('/seguridad/login')
+    if session.get('usuario_rol') == 'ESTUDIANTE':
+        return redirect('/paginas/portal-pagos')
     return render_template("index.html")
 
 

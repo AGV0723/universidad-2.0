@@ -129,8 +129,18 @@
     <i class="bi bi-credit-card"></i> Mis Pagos
   </a>
 
+ {% elif session.get('usuario_rol') == 'ASISTENTE' %}
+  <!-- Menú para ASISTENTE: solo acceso a estudiantes e inscripciones -->
+  <div class="nav-section">Gestión</div>
+  <a href="/paginas/estudiantes" class="nav-link {% if '/estudiantes' in request.path %}active{% endif %}">
+    <i class="bi bi-people"></i> Estudiantes
+  </a>
+  <a href="/paginas/inscripciones" class="nav-link {% if '/inscripciones' in request.path %}active{% endif %}">
+    <i class="bi bi-clipboard-check"></i> Inscripciones
+  </a>
+  
   {% else %}
-  <!-- Menú para otros roles (ADMIN, SUPERVISOR, etc.) -->
+  <!-- Menú para ADMIN y SUPERVISOR -->
   <div class="nav-section">Principal</div>
   <a href="/" class="nav-link {% if request.path=='/' %}active{% endif %}">
     <i class="bi bi-speedometer2"></i> Dashboard
