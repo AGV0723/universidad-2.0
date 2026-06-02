@@ -27,12 +27,11 @@ def obtener_estadisticas():
     )
     total_periodos = total_per['count'] if total_per else 0
     
-    # Ingresos esperados (suma de todas las inscripciones)
+    # Ingresos esperados (suma de todos los cobros registrados en cuenta_corriente)
     ingresos = ejecutar_query(
-        """SELECT COALESCE(SUM(rc.valor), 0) as total
-           FROM inscripcion i
-           JOIN regla_cobro rc ON i.id_programa = rc.id_programa
-           WHERE i.id_periodo = rc.id_periodo""",
+        """SELECT COALESCE(SUM(monto), 0) as total
+           FROM cuenta_corriente
+           WHERE tipo = 'COBRO'""",
         fetchone=True
     )
     ingresos_periodo = ingresos['total'] if ingresos else 0
@@ -71,9 +70,10 @@ def obtener_ingresos_por_programa():
     return ejecutar_query(
         """SELECT 
               p.nombre as programa,
-              COALESCE(SUM(rc.valor), 0) as ingresos
+              COALESCE(SUM(cc.monto), 0) as ingresos
            FROM programa_academico p
-           LEFT JOIN regla_cobro rc ON p.id_programa = rc.id_programa
+           LEFT JOIN estudiante e ON p.id_programa = e.id_programa
+           LEFT JOIN cuenta_corriente cc ON e.id_estudiante = cc.id_estudiante AND cc.tipo = 'COBRO'
            GROUP BY p.id_programa, p.nombre
            ORDER BY ingresos DESC""",
         ()
@@ -95,17 +95,20 @@ def obtener_estudiantes_pendientes():
     """Retorna lista de estudiantes con pagos pendientes desde la BD."""
     return ejecutar_query(
         """SELECT 
-             e.id_estudiante,
-             CONCAT(e.primer_nombre, ' ', COALESCE(e.segundo_nombre, ''), ' ', e.apellido) as nombre,
-             p.nombre as programa,
-             COALESCE(SUM(cc.monto), 0) as saldo,
-             'PENDIENTE' as estado
-           FROM estudiante e
-           JOIN programa_academico p ON e.id_programa = p.id_programa
-           LEFT JOIN cuenta_corriente cc ON e.id_estudiante = cc.id_estudiante
-           GROUP BY e.id_estudiante, e.primer_nombre, e.segundo_nombre, e.apellido, p.nombre
-           HAVING saldo < 0
-           LIMIT 10""",
+              e.id_estudiante,
+              CONCAT(e.primer_nombre, ' ', COALESCE(e.segundo_nombre, ''), ' ', e.apellido) as nombre,
+              p.nombre as programa,
+              (COALESCE(SUM(CASE WHEN cc.tipo = 'COBRO' THEN cc.monto ELSE 0 END), 0) - 
+               COALESCE(SUM(CASE WHEN cc.tipo = 'PAGO' THEN cc.monto ELSE 0 END), 0)) as saldo,
+              DATEDIFF(CURDATE(), MIN(CASE WHEN cc.tipo = 'COBRO' THEN cc.fecha_movimiento END)) as dias_pendiente,
+              'PENDIENTE' as estado
+            FROM estudiante e
+            JOIN programa_academico p ON e.id_programa = p.id_programa
+            LEFT JOIN cuenta_corriente cc ON e.id_estudiante = cc.id_estudiante
+            GROUP BY e.id_estudiante, e.primer_nombre, e.segundo_nombre, e.apellido, p.nombre
+            HAVING saldo > 0
+            ORDER BY saldo DESC
+            LIMIT 10""",
         ()
     )
 

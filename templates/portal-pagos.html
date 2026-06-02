@@ -1,0 +1,355 @@
+<!--
+Portal de pagos para estudiantes
+-->
+
+{% extends "base.html" %}
+{% block title %}Portal de Pagos{% endblock %}
+{% block page_title %}Portal de Pagos y Consulta de Cuenta{% endblock %}
+
+{% block content %}
+<div class="row g-3">
+  <!-- Información del estudiante -->
+  <div class="col-12">
+    <div class="card">
+      <div class="card-header bg-primary text-white fw-semibold">
+        <i class="bi bi-person-circle me-2"></i>Información del Estudiante
+      </div>
+      <div class="card-body">
+        <div id="infoEstudiante" class="row g-3">
+          <div class="col-md-3">
+            <label class="text-muted small">Código</label>
+            <p class="fw-bold" id="codEstudiante">-</p>
+          </div>
+          <div class="col-md-4">
+            <label class="text-muted small">Nombre Completo</label>
+            <p id="nomEstudiante">-</p>
+          </div>
+          <div class="col-md-3">
+            <label class="text-muted small">Programa</label>
+            <p id="progEstudiante">-</p>
+          </div>
+          <div class="col-md-2">
+            <label class="text-muted small">Estado</label>
+            <p id="estadoEstudiante">-</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Seleccionar período -->
+  <div class="col-md-6">
+    <div class="card">
+      <div class="card-header bg-success text-white fw-semibold">
+        <i class="bi bi-calendar-range me-2"></i>Consultar Período
+      </div>
+      <div class="card-body">
+        <div class="row g-2 align-items-end">
+          <div class="col">
+            <label class="form-label">Período *</label>
+            <select class="form-select" id="selPeriodo">
+              <option value="">Seleccionar período...</option>
+            </select>
+          </div>
+          <div class="col-auto">
+            <button class="btn btn-success" onclick="cargarCuenta()">
+              <i class="bi bi-search me-1"></i>Ver Deuda
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Resumen de deuda -->
+  <div class="col-md-6">
+    <div class="card">
+      <div class="card-header bg-warning text-dark fw-semibold">
+        <i class="bi bi-exclamation-triangle me-2"></i>Resumen de Cuenta
+      </div>
+      <div class="card-body">
+        <div id="resumenContent" class="text-center text-muted py-3">
+          Seleccione un período para ver el resumen
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tabla de movimientos -->
+  <div class="col-12">
+    <div class="card">
+      <div class="card-header bg-info text-white fw-semibold">
+        <i class="bi bi-receipt me-2"></i>Detalles de Cuenta Corriente
+      </div>
+      <div class="card-body p-0">
+        <div id="tablaMovimientos" class="text-center text-muted py-4">
+          Seleccione un período para ver los movimientos
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+</div>
+
+<!-- Modal para confirmar pago -->
+<div class="modal fade" id="modalPago" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header bg-success text-white">
+        <h5 class="modal-title"><i class="bi bi-credit-card me-2"></i>Registrar Pago</h5>
+        <button class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3">
+          <label class="form-label">Saldo Pendiente</label>
+          <div class="alert alert-warning" id="saldoPendiente">$0.00</div>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Monto a Pagar *</label>
+          <input class="form-control" type="number" id="montoPago" min="0.01" step="0.01"/>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Código de Pago *</label>
+          <select class="form-select" id="codigoPago"></select>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Descripción</label>
+          <input class="form-control" id="descripcionPago" placeholder="Opcional"/>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Origen de Pago *</label>
+          <select class="form-select" id="origenPago">
+            <option value="EN_LINEA">En línea (Transferencia)</option>
+            <option value="CAJA">Caja</option>
+          </select>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button class="btn btn-success" onclick="procesarPago()">Confirmar Pago</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let estudianteActual = null;
+let periodoSeleccionado = null;
+let codigosPago = [];
+const mPago = new bootstrap.Modal(document.getElementById('modalPago'));
+
+async function cargarDatos() {
+  try {
+    // Obtener datos del estudiante actual
+    const sesion = await api('GET', '/seguridad/sesion');
+    if (!sesion || !sesion.id_usuario) {
+      showToast('Sesión no válida', 'danger');
+      return;
+    }
+
+    // Obtener información del estudiante
+    const estudiantes = await api('GET', '/estudiantes/');
+    
+    // Buscar el estudiante asociado al usuario actual
+    // Para esto necesitamos obtener la persona del usuario y luego el estudiante
+    const personas = await api('GET', '/seguridad/personas/');
+    const persona = personas.find(p => p.id_persona === sesion.id_persona);
+    
+    if (!persona) {
+      showToast('No se encontró la información de la persona', 'danger');
+      return;
+    }
+
+    const est = estudiantes.find(e => e.documento_identidad === persona.documento_identidad);
+    
+    if (!est) {
+      showToast('No se encontró información de estudiante asociada a su usuario', 'warning');
+      return;
+    }
+
+    estudianteActual = est;
+    
+    // Llenar información del estudiante
+    document.getElementById('codEstudiante').textContent = est.codigo_estudiantil;
+    document.getElementById('nomEstudiante').textContent = `${est.primer_nombre} ${est.segundo_nombre || ''} ${est.apellido}`.trim();
+    document.getElementById('progEstudiante').textContent = est.nombre_programa || '-';
+    document.getElementById('estadoEstudiante').innerHTML = est.activo ? 
+      '<span class="badge bg-success">Activo</span>' : 
+      '<span class="badge bg-secondary">Inactivo</span>';
+
+    // Cargar períodos y códigos de pago
+    const [periodos, codigos] = await Promise.all([
+      api('GET', '/periodos/'),
+      api('GET', '/codigos-detalle/?grupo=PAGO')
+    ]);
+
+    codigosPago = codigos;
+    
+    // Poblar select de períodos
+    const selPeriodo = document.getElementById('selPeriodo');
+    periodos.forEach(p => {
+      selPeriodo.appendChild(new Option(p.codigo, p.id_periodo));
+    });
+
+    // Poblar select de códigos de pago
+    const selCodigo = document.getElementById('codigoPago');
+    codigos.forEach(c => {
+      selCodigo.appendChild(new Option(`${c.codigo} — ${c.descripcion}`, c.codigo));
+    });
+
+  } catch(e) {
+    showToast(e.message || 'Error al cargar datos', 'danger');
+  }
+}
+
+async function cargarCuenta() {
+  const idPeriodo = document.getElementById('selPeriodo').value;
+  
+  if (!idPeriodo) {
+    showToast('Seleccione un período', 'warning');
+    return;
+  }
+
+  if (!estudianteActual) {
+    showToast('Información del estudiante no disponible', 'danger');
+    return;
+  }
+
+  try {
+    periodoSeleccionado = idPeriodo;
+    
+    // Obtener cuenta corriente
+    const cuenta = await api('GET', 
+      `/inscripciones/cuenta-corriente?id_estudiante=${estudianteActual.id_estudiante}&id_periodo=${idPeriodo}`);
+
+    // Mostrar resumen
+    const resumen = document.getElementById('resumenContent');
+    resumen.innerHTML = `
+      <div class="row g-2">
+        <div class="col-4">
+          <label class="text-muted small">Total Cobros</label>
+          <p class="fw-bold text-danger">${fmtMoney(cuenta.total_cobros)}</p>
+        </div>
+        <div class="col-4">
+          <label class="text-muted small">Total Pagos</label>
+          <p class="fw-bold text-success">${fmtMoney(cuenta.total_pagos)}</p>
+        </div>
+        <div class="col-4">
+          <label class="text-muted small">Saldo</label>
+          <p class="fw-bold ${cuenta.saldo === 0 ? 'text-success' : 'text-danger'}">
+            ${fmtMoney(cuenta.saldo)}
+          </p>
+        </div>
+      </div>
+      <div class="mt-2">
+        <button class="btn btn-success btn-sm w-100" onclick="abrirModalPago(${cuenta.saldo})" 
+          ${cuenta.saldo <= 0 ? 'disabled' : ''}>
+          <i class="bi bi-credit-card me-1"></i>Pagar Ahora
+        </button>
+      </div>
+    `;
+
+    // Mostrar tabla de movimientos
+    const filas = cuenta.movimientos.map(m => `
+      <tr>
+        <td>${fmtDate(m.fecha_movimiento)}</td>
+        <td><span class="badge ${m.tipo === 'COBRO' ? 'bg-danger' : 'bg-success'}">${m.tipo}</span></td>
+        <td>${m.codigo}</td>
+        <td>${m.descripcion_breve || '—'}</td>
+        <td class="text-end">${fmtMoney(m.monto)}</td>
+      </tr>
+    `).join('');
+
+    const tabla = document.getElementById('tablaMovimientos');
+    tabla.innerHTML = `
+      <table class="table table-sm">
+        <thead class="table-dark text-white">
+          <tr>
+            <th>Fecha</th>
+            <th>Tipo</th>
+            <th>Código</th>
+            <th>Descripción</th>
+            <th class="text-end">Monto</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${filas || '<tr><td colspan="5" class="text-center text-muted">Sin movimientos</td></tr>'}
+        </tbody>
+        <tfoot class="table-light fw-bold">
+          <tr>
+            <td colspan="4" class="text-end">TOTAL A PAGAR</td>
+            <td class="text-end text-danger">${fmtMoney(cuenta.saldo)}</td>
+          </tr>
+        </tfoot>
+      </table>
+    `;
+
+  } catch(e) {
+    showToast(e.message || 'Error al cargar cuenta', 'danger');
+  }
+}
+
+function abrirModalPago(saldo) {
+  if (saldo <= 0) {
+    showToast('No hay saldo pendiente', 'info');
+    return;
+  }
+  
+  document.getElementById('saldoPendiente').textContent = fmtMoney(saldo);
+  document.getElementById('montoPago').value = '';
+  document.getElementById('descripcionPago').value = '';
+  document.getElementById('origenPago').value = 'EN_LINEA';
+  mPago.show();
+}
+
+async function procesarPago() {
+  const monto = parseFloat(document.getElementById('montoPago').value);
+  const codigo = document.getElementById('codigoPago').value;
+  const descripcion = document.getElementById('descripcionPago').value;
+  const origen = document.getElementById('origenPago').value;
+
+  if (!monto || monto <= 0) {
+    showToast('Ingrese un monto válido', 'warning');
+    return;
+  }
+
+  if (!codigo) {
+    showToast('Seleccione un código de pago', 'warning');
+    return;
+  }
+
+  try {
+    // Obtener la inscripción del período seleccionado
+    const inscripciones = await api('GET', 
+      `/inscripciones/?id_estudiante=${estudianteActual.id_estudiante}&id_periodo=${periodoSeleccionado}`);
+    
+    if (!inscripciones || inscripciones.length === 0) {
+      showToast('No hay inscripción en este período', 'warning');
+      return;
+    }
+
+    const idInscripcion = inscripciones[0].id_inscripcion;
+
+    // Registrar el pago
+    await api('POST', `/inscripciones/${idInscripcion}/pago`, {
+      monto,
+      codigo_pago: codigo,
+      descripcion_breve: descripcion,
+      origen
+    });
+
+    showToast('Pago registrado correctamente', 'success');
+    mPago.hide();
+    await cargarCuenta();
+
+  } catch(e) {
+    showToast(e.message || 'Error al procesar pago', 'danger');
+  }
+}
+
+cargarDatos();
+</script>
+{% endblock %}

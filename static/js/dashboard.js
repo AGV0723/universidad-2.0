@@ -49,7 +49,7 @@ async function loadDashboardStats() {
       nombre: est.nombre,
       programa: est.programa,
       valor: Math.abs(est.saldo),
-      dias: Math.floor(Math.random() * 30)
+      dias: est.dias_pendiente || 0
     }));
     
     loadEstudiantesPendientes(estudiantesFormato);

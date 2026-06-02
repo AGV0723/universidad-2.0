@@ -72,7 +72,8 @@ def get_inscripciones():
     """Retorna lista de inscripciones desde BD."""
     id_periodo = request.args.get("id_periodo", type=int)
     id_programa = request.args.get("id_programa", type=int)
-    return jsonify(listar_inscripciones(id_periodo, id_programa)), 200
+    id_estudiante = request.args.get("id_estudiante", type=int)
+    return jsonify(listar_inscripciones(id_periodo, id_programa, id_estudiante)), 200
 
 @inscripcion_bp.route("/<int:id_insc>", methods=["GET"])
 def get_inscripcion(id_insc):
@@ -90,10 +91,50 @@ def get_volante_matricula(id_insc):
         return jsonify({"error": "Volante no encontrado"}), 404
     return jsonify(volante), 200
 
+@inscripcion_bp.route("/cuenta-corriente", methods=["GET"])
+@inscripcion_bp.route("/cuenta-corriente/", methods=["GET"])
+def get_cuenta_corriente():
+    """Obtiene la cuenta corriente de un estudiante en un período."""
+    id_estudiante = request.args.get("id_estudiante", type=int)
+    id_periodo = request.args.get("id_periodo", type=int)
+    
+    if not id_estudiante or not id_periodo:
+        return jsonify({"error": "Se requieren id_estudiante e id_periodo"}), 400
+    
+    cuenta = obtener_cuenta_corriente(id_estudiante, id_periodo)
+    if not cuenta:
+        return jsonify({"error": "No hay datos de cuenta corriente"}), 404
+    
+    return jsonify(cuenta), 200
+
 @inscripcion_bp.route("/<int:id_insc>", methods=["PUT"])
 def put_inscripcion(id_insc):
     """Actualiza una inscripción en BD."""
     return jsonify({"mensaje": "Inscripción actualizada"}), 200
+
+@inscripcion_bp.route("/<int:id_insc>/pago", methods=["POST"])
+def post_pago(id_insc):
+    """Registra un pago para una inscripción."""
+    d = request.json or {}
+    
+    requeridos = ("monto", "codigo_pago")
+    if not all(d.get(k) for k in requeridos):
+        return jsonify({"error": f"Se requieren: {', '.join(requeridos)}"}), 400
+    
+    try:
+        monto = float(d["monto"])
+        codigo_pago = d["codigo_pago"]
+        descripcion = d.get("descripcion_breve", "")
+        origen = d.get("origen", "CAJA")
+        
+        exito, msg = registrar_pago(id_insc, monto, codigo_pago, descripcion, origen)
+        
+        if not exito:
+            return jsonify({"error": msg}), 400
+        
+        return jsonify({"mensaje": msg}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
 
 @inscripcion_bp.route("/<int:id_insc>", methods=["DELETE"])
 def delete_inscripcion(id_insc):

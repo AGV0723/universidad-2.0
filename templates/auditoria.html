@@ -1,0 +1,220 @@
+{% extends "base.html" %}
+{% block title %}Auditoría de Pagos{% endblock %}
+{% block page_title %}Auditoría de Pagos y Cobros{% endblock %}
+
+{% block content %}
+<div class="row g-3">
+  <!-- Resumen General -->
+  <div class="col-lg-6">
+    <div class="card">
+      <div class="card-header bg-primary text-white fw-semibold">
+        <i class="bi bi-pie-chart me-2"></i>Resumen General
+      </div>
+      <div class="card-body">
+        <div id="resumenGeneral" class="text-center text-muted py-4">
+          Cargando datos...
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Resumen por Período -->
+  <div class="col-lg-6">
+    <div class="card">
+      <div class="card-header bg-success text-white fw-semibold">
+        <i class="bi bi-calendar3 me-2"></i>Ingresos por Período
+      </div>
+      <div class="card-body p-0">
+        <div id="resumenPeriodos" class="text-center text-muted py-4">
+          Cargando datos...
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Estudiantes con Deuda -->
+  <div class="col-12">
+    <div class="card">
+      <div class="card-header bg-warning text-dark fw-semibold">
+        <i class="bi bi-exclamation-triangle me-2"></i>Estudiantes con Deuda Pendiente
+      </div>
+      <div class="card-body p-0">
+        <div id="estudiantesDeuda" class="text-center text-muted py-4">
+          Cargando datos...
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Estudiantes Pagados -->
+  <div class="col-12">
+    <div class="card">
+      <div class="card-header bg-info text-white fw-semibold">
+        <i class="bi bi-check-circle me-2"></i>Estudiantes Pagados (Saldo = $0)
+      </div>
+      <div class="card-body p-0">
+        <div id="estudiantesPagados" class="text-center text-muted py-4">
+          Cargando datos...
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Últimos Movimientos -->
+  <div class="col-12">
+    <div class="card">
+      <div class="card-header bg-secondary text-white fw-semibold">
+        <i class="bi bi-clock-history me-2"></i>Últimos 20 Movimientos
+      </div>
+      <div class="card-body p-0">
+        <div id="ultimosMovimientos" class="text-center text-muted py-4">
+          Cargando datos...
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+async function cargarAuditoria() {
+  try {
+    // 1. Resumen General
+    const resumen = await api('GET', '/api/audit/resumen-pagos');
+    const resumenHtml = `
+      <div class="row g-3">
+        ${resumen.movimientos_por_tipo.map(m => `
+          <div class="col-6">
+            <label class="text-muted small">${m.tipo}</label>
+            <p class="fw-bold text-${m.tipo === 'COBRO' ? 'danger' : 'success'}">${m.cantidad} movimientos<br/>$${(m.total || 0).toLocaleString('es-CO')}</p>
+          </div>
+        `).join('')}
+        <div class="col-12 pt-2 border-top">
+          <label class="text-muted small">Saldo Neto</label>
+          <p class="fw-bold text-primary h5">$${((resumen.acumulado.total_cobros || 0) - (resumen.acumulado.total_pagos || 0)).toLocaleString('es-CO')}</p>
+        </div>
+      </div>
+    `;
+    document.getElementById('resumenGeneral').innerHTML = resumenHtml;
+
+    // 2. Resumen por Períodos
+    const periodos = await api('GET', '/api/audit/resumen-periodos');
+    const periodosHtml = `
+      <table class="table table-sm table-hover">
+        <thead class="table-dark text-white">
+          <tr>
+            <th>Período</th>
+            <th class="text-end">Cobros</th>
+            <th class="text-end">Pagos</th>
+            <th class="text-end">Saldo</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${periodos.map(p => `
+            <tr>
+              <td><strong>${p.periodo}</strong></td>
+              <td class="text-end text-danger">$${(p.total_cobros || 0).toLocaleString('es-CO')}</td>
+              <td class="text-end text-success">$${(p.total_pagos || 0).toLocaleString('es-CO')}</td>
+              <td class="text-end fw-bold text-${(p.saldo_pendiente || 0) > 0 ? 'warning' : 'success'}">\$${(p.saldo_pendiente || 0).toLocaleString('es-CO')}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    `;
+    document.getElementById('resumenPeriodos').innerHTML = periodosHtml;
+
+    // 3. Estudiantes con Deuda
+    const deuda = await api('GET', '/api/audit/estudiantes-deuda');
+    const deudaHtml = deuda.length === 0 ? 
+      '<p class="text-center text-muted py-4">✓ Todos los estudiantes han pagado</p>' :
+      `
+      <table class="table table-sm table-hover">
+        <thead class="table-dark text-white">
+          <tr>
+            <th>Código</th>
+            <th>Estudiante</th>
+            <th>Período</th>
+            <th class="text-end">Deuda Pendiente</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${deuda.map(d => `
+            <tr>
+              <td><small class="font-monospace">${d.codigo_estudiantil}</small></td>
+              <td>${d.estudiante}</td>
+              <td>${d.periodo}</td>
+              <td class="text-end fw-bold text-warning">$${(d.deuda_pendiente || 0).toLocaleString('es-CO')}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+      `;
+    document.getElementById('estudiantesDeuda').innerHTML = deudaHtml;
+
+    // 4. Estudiantes Pagados
+    const pagados = await api('GET', '/api/audit/estudiantes-pagados');
+    const pagadosHtml = pagados.length === 0 ? 
+      '<p class="text-center text-muted py-4">Sin datos</p>' :
+      `
+      <table class="table table-sm table-hover">
+        <thead class="table-dark text-white">
+          <tr>
+            <th>Código</th>
+            <th>Estudiante</th>
+            <th>Período</th>
+            <th class="text-end">Movimientos</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${pagados.map(p => `
+            <tr>
+              <td><small class="font-monospace">${p.codigo_estudiantil}</small></td>
+              <td>${p.estudiante}</td>
+              <td>${p.periodo}</td>
+              <td class="text-end">${p.num_movimientos}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+      `;
+    document.getElementById('estudiantesPagados').innerHTML = pagadosHtml;
+
+    // 5. Últimos Movimientos
+    const movimientos = await api('GET', '/api/audit/ultimos-movimientos');
+    const movimientosHtml = `
+      <table class="table table-sm table-hover">
+        <thead class="table-dark text-white">
+          <tr>
+            <th>Fecha</th>
+            <th>Tipo</th>
+            <th>Estudiante</th>
+            <th>Período</th>
+            <th class="text-end">Monto</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${movimientos.map(m => `
+            <tr>
+              <td><small>${m.fecha} ${m.hora}</small></td>
+              <td><span class="badge ${m.tipo === 'COBRO' ? 'bg-danger' : 'bg-success'}">${m.tipo}</span></td>
+              <td>${m.estudiante}</td>
+              <td>${m.periodo}</td>
+              <td class="text-end fw-bold">$${(m.monto || 0).toLocaleString('es-CO')}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    `;
+    document.getElementById('ultimosMovimientos').innerHTML = movimientosHtml;
+
+  } catch(e) {
+    console.error(e);
+    showToast(e.message || 'Error al cargar auditoría', 'danger');
+  }
+}
+
+// Cargar datos al abrir la página
+cargarAuditoria();
+</script>
+{% endblock %}

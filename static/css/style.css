@@ -1,9 +1,8 @@
-/* ═══════════════════════════════════════════════════════════════════════════════
-   UNIVERSIDAD DEL NORTE — SISTEMA DE GESTIÓN DE MATRÍCULAS
+/* 
    Estilos principales de la aplicación
-   ═════════════════════════════════════════════════════════════════════════════*/
+*/
 
-/* ── Variables globales ─────────────────────────────────────────────────────── */
+/*  Variables globales  */
 :root {
   --uc-azul: #003366;
   --uc-verde: #006633;
@@ -191,12 +190,12 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .table thead {
-  background-color: #f8f9fa;
+  background-color: #003366;
   border-bottom: 2px solid var(--uc-borde);
 }
 
 .table thead th {
-  color: var(--uc-azul);
+  color: #fff;
   font-weight: 600;
   padding: 1rem 0.75rem;
   border: none;
@@ -453,10 +452,22 @@ canvas {
   animation: slideIn 0.3s ease-out;
 }
 
-/* ── Estado activo en navegación ───────────────────────────────────────────── */
-.nav-link.active {
-  color: #fff !important;
-  background-color: rgba(255, 255, 255, 0.12);
+/* ── Nav tabs activos y hover ───────────────────────────────────────────────── */
+.nav-tabs .nav-link {
+  color: #555;
+  border-bottom: 3px solid transparent;
+  transition: all 0.3s ease;
+}
+
+.nav-tabs .nav-link:hover {
+  color: var(--uc-azul);
+  background-color: #f0f4ff;
+}
+
+.nav-tabs .nav-link.active {
+  color: #fff;
+  background-color: var(--uc-azul);
+  border-bottom-color: var(--uc-azul);
 }
 
 /* ── Utilidades de espaciado ───────────────────────────────────────────────── */

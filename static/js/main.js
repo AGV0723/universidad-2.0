@@ -1,15 +1,10 @@
-/**
- * ═════════════════════════════════════════════════════════════════════════════
- * UNIVERSIDAD CARIBE — SISTEMA DE GESTIÓN DE MATRÍCULAS
- * main.js — Funciones globales y utilidades de la aplicación
- * ═════════════════════════════════════════════════════════════════════════════
+/*
+ * Funciones globales y utilidades de la aplicación
  */
 
-/**
- * ────────────────────────────────────────────────────────────────────────────
+/*
  * FUNCIONES DE COMUNICACIÓN CON EL SERVIDOR (API)
- * ────────────────────────────────────────────────────────────────────────────
- */
+*/
 
 /**
  * Realiza una solicitud HTTP a la API.
@@ -80,10 +75,8 @@ async function apiDelete(url) {
   return api('DELETE', url);
 }
 
-/**
- * ────────────────────────────────────────────────────────────────────────────
+/*
  * NOTIFICACIONES (TOASTS)
- * ────────────────────────────────────────────────────────────────────────────
  */
 
 /**
@@ -117,11 +110,7 @@ function showToast(message, type = 'success', duration = 3500) {
   setTimeout(() => toast.remove(), duration + 500);
 }
 
-/**
- * ────────────────────────────────────────────────────────────────────────────
- * SPINNER DE CARGA
- * ────────────────────────────────────────────────────────────────────────────
- */
+/*SPINNER DE CARGA*/
 
 /**
  * Muestra u oculta el spinner global de carga.
@@ -134,11 +123,7 @@ function spinner(show) {
   }
 }
 
-/**
- * ────────────────────────────────────────────────────────────────────────────
- * FORMATEO DE DATOS
- * ────────────────────────────────────────────────────────────────────────────
- */
+/* FORMATEO DE DATOS */
 
 /**
  * Formatea un número como moneda en pesos colombianos.
@@ -187,11 +172,7 @@ function fmtNumber(value, decimals = 2) {
   }).format(value || 0);
 }
 
-/**
- * ────────────────────────────────────────────────────────────────────────────
- * VALIDACIÓN DE FORMULARIOS
- * ────────────────────────────────────────────────────────────────────────────
- */
+/*VALIDACIÓN DE FORMULARIOS*/
 
 /**
  * Valida un email.
@@ -221,11 +202,7 @@ function isNotEmpty(value) {
   return value && value.toString().trim().length > 0;
 }
 
-/**
- * ────────────────────────────────────────────────────────────────────────────
- * MANIPULACIÓN DEL DOM
- * ────────────────────────────────────────────────────────────────────────────
- */
+/*MANIPULACIÓN DEL DOM*/
 
 /**
  * Obtiene el valor de un input o select.
@@ -284,11 +261,7 @@ function setHTML(selector, html) {
   }
 }
 
-/**
- * ────────────────────────────────────────────────────────────────────────────
- * UTILIDADES DE ARRAYS Y OBJETOS
- * ────────────────────────────────────────────────────────────────────────────
- */
+/*UTILIDADES DE ARRAYS Y OBJETOS*/
 
 /**
  * Busca un valor en un array de objetos.
@@ -328,11 +301,7 @@ function sumArray(array, key) {
   return array.reduce((sum, item) => sum + (parseFloat(item[key]) || 0), 0);
 }
 
-/**
- * ────────────────────────────────────────────────────────────────────────────
- * MANEJO DE SESIONES Y AUTENTICACIÓN
- * ────────────────────────────────────────────────────────────────────────────
- */
+/*MANEJO DE SESIONES Y AUTENTICACIÓN*/
 
 /**
  * Obtiene información de la sesión actual.
@@ -357,11 +326,7 @@ function hasRole(rol) {
   return roleEl && roleEl.getAttribute('data-user-role') === rol;
 }
 
-/**
- * ────────────────────────────────────────────────────────────────────────────
- * ALMACENAMIENTO LOCAL (LocalStorage)
- * ────────────────────────────────────────────────────────────────────────────
- */
+/*ALMACENAMIENTO LOCAL (LocalStorage)*/
 
 /**
  * Guarda un valor en localStorage.
@@ -403,11 +368,7 @@ function removeLocalStorage(key) {
   }
 }
 
-/**
- * ────────────────────────────────────────────────────────────────────────────
- * TABLAS Y LISTADOS
- * ────────────────────────────────────────────────────────────────────────────
- */
+/*TABLAS Y LISTADOS*/
 
 /**
  * Crea una fila de tabla HTML a partir de un objeto.
@@ -449,11 +410,7 @@ function createTable(data, columns, headers = null) {
   return html;
 }
 
-/**
- * ────────────────────────────────────────────────────────────────────────────
- * FUNCIONES DE AUTENTICACIÓN
- * ────────────────────────────────────────────────────────────────────────────
- */
+/*FUNCIONES DE AUTENTICACIÓN*/
 
 async function logout() {
   if (confirm('¿Está seguro de que desea cerrar sesión?')) {
@@ -466,11 +423,7 @@ async function logout() {
   }
 }
 
-/**
- * ────────────────────────────────────────────────────────────────────────────
- * DIÁLOGOS Y CONFIRMACIONES
- * ────────────────────────────────────────────────────────────────────────────
- */
+/*DIÁLOGOS Y CONFIRMACIONES*/
 
 /**
  * Muestra un diálogo de confirmación.
@@ -511,11 +464,7 @@ function confirmAction(message) {
   });
 }
 
-/**
- * ────────────────────────────────────────────────────────────────────────────
- * INICIALIZACIÓN
- * ────────────────────────────────────────────────────────────────────────────
- */
+/**INICIALIZACIÓN*/
 
 // Verifica que Bootstrap esté disponible
 document.addEventListener('DOMContentLoaded', () => {
@@ -527,11 +476,7 @@ document.addEventListener('DOMContentLoaded', () => {
   console.log('✓ main.js cargado correctamente');
 });
 
-/**
- * ────────────────────────────────────────────────────────────────────────────
- * EXPORTAR PARA USO EN MÓDULOS
- * ────────────────────────────────────────────────────────────────────────────
- */
+/*EXPORTAR PARA USO EN MÓDULOS*/
 
 // En caso de que se use como módulo ES6
 if (typeof module !== 'undefined' && module.exports) {

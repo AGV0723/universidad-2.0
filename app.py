@@ -11,7 +11,7 @@ load_dotenv()
 app = Flask(__name__)
 app.secret_key = os.getenv("SECRET_KEY", "universidad_caribe_dev")
 
-# ── Importar blueprints ────────────────────────────────────────
+#  Importacion de blueprints 
 from routes.programa         import programa_bp
 from routes.asignatura       import asignatura_bp
 from routes.estudiante       import estudiante_bp
@@ -26,8 +26,9 @@ from routes.seguridad        import seguridad_bp
 from routes.paginas          import paginas_bp
 from routes.dashboard        import dashboard_bp
 from routes.pensum           import pensum_bp
+from routes.audit            import audit_bp
 
-# ── Registrar blueprints con prefijos ─────────────────────────
+#  Registrar blueprints con prefijos 
 app.register_blueprint(programa_bp,         url_prefix="/programas")
 app.register_blueprint(asignatura_bp,       url_prefix="/asignaturas")
 app.register_blueprint(estudiante_bp,       url_prefix="/estudiantes")
@@ -42,6 +43,7 @@ app.register_blueprint(seguridad_bp,        url_prefix="/seguridad")
 app.register_blueprint(paginas_bp,          url_prefix="/paginas")
 app.register_blueprint(dashboard_bp,        url_prefix="/api/dashboard")
 app.register_blueprint(pensum_bp,           url_prefix="/pensum")
+app.register_blueprint(audit_bp,            url_prefix="/api/audit")
 
 
 @app.route("/")
@@ -53,7 +55,7 @@ def index():
     return render_template("index.html")
 
 
-# ── Manejo de errores ─────────────────────────────────────────
+# Manejo de errores 
 @app.errorhandler(404)
 def not_found(e):
     return jsonify({"error": "Recurso no encontrado"}), 404

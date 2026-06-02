@@ -23,6 +23,7 @@ _pool = pooling.MySQLConnectionPool(
     user=os.getenv("DB_USER", "root"),
     password=os.getenv("DB_PASSWORD", ""),
     database=os.getenv("DB_NAME", "uninorte"),
+    # Importante para MySQL 8+: usar el plugin de autenticación correcto
 )
 
 

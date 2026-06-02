@@ -137,12 +137,17 @@ def crear_persona(primer_nombre: str, apellido: str, documento_identidad: str,
 
 
 def actualizar_persona(id_persona: int, **kwargs):
-    if not obtener_persona(id_persona):
+    """
+    Actualiza campos de la persona.
+    Si se actualizan datos, también sincroniza con ESTUDIANTE y USUARIO.
+    """
+    persona = obtener_persona(id_persona)
+    if not persona:
         return False, "Persona no encontrada."
 
     campos_permitidos = {
         "primer_nombre", "segundo_nombre", "apellido", "segundo_apellido",
-        "telefono", "correo"
+        "telefono", "correo", "documento_identidad"
     }
     campos, valores = [], []
     for campo, valor in kwargs.items():
@@ -157,7 +162,54 @@ def actualizar_persona(id_persona: int, **kwargs):
         f"UPDATE persona SET {', '.join(campos)} WHERE id_persona = %s",
         tuple(valores)
     )
+    
+    # Sincronizar con ESTUDIANTE y USUARIO
+    try:
+        estudiante = ejecutar_query(
+            "SELECT id_estudiante FROM estudiante WHERE documento_identidad = %s",
+            (persona["documento_identidad"],), fetchone=True
+        )
+        if estudiante:
+            # Actualizar mismos campos en ESTUDIANTE
+            datos_sync = {k: v for k, v in kwargs.items() if k in campos_permitidos}
+            if datos_sync:
+                sync_campos = []
+                sync_valores = []
+                for k, v in datos_sync.items():
+                    sync_campos.append(f'{k}=%s')
+                    sync_valores.append(v)
+                sync_valores.append(estudiante["id_estudiante"])
+                ejecutar_comando(
+                    f"UPDATE estudiante SET {', '.join(sync_campos)} WHERE id_estudiante = %s",
+                    tuple(sync_valores)
+                )
+        
+        # Actualizar correo en USUARIO si cambió
+        if "correo" in kwargs:
+            usuario = ejecutar_query(
+                "SELECT id_usuario FROM usuario WHERE id_persona = %s",
+                (id_persona,), fetchone=True
+            )
+            if usuario:
+                ejecutar_comando(
+                    "UPDATE usuario SET correo = %s WHERE id_usuario = %s",
+                    (kwargs["correo"], usuario["id_usuario"])
+                )
+    except:
+        pass  # Si falla sincronización, la actualización principal ya se hizo
+    
     return True, "Persona actualizada."
+
+
+def actualizar_persona_por_documento(documento_identidad: str, **kwargs):
+    """Utilidad para actualizar persona por documento de identidad."""
+    persona = ejecutar_query(
+        "SELECT id_persona FROM persona WHERE documento_identidad = %s",
+        (documento_identidad,), fetchone=True
+    )
+    if not persona:
+        return False, "Persona no encontrada."
+    return actualizar_persona(persona["id_persona"], **kwargs)
 
 
 def eliminar_persona(id_persona: int):
@@ -169,6 +221,7 @@ def eliminar_persona(id_persona: int):
         return False, "No se puede eliminar: la persona tiene un usuario asociado."
     ejecutar_comando("DELETE FROM persona WHERE id_persona = %s", (id_persona,))
     return True, "Persona eliminada."
+
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -242,17 +295,41 @@ def crear_usuario(username: str, password_plain: str, correo: str,
 def actualizar_usuario(id_usuario: int, **kwargs):
     """
     Actualiza campos del usuario.
-    Campos permitidos: correo, activo, id_rol.
-    No permite cambiar username ni password aquí (hay función aparte para password).
+    Campos permitidos: username, correo, activo, id_rol, password.
+    
+    Si se actualiza correo, también se sincroniza con PERSONA y ESTUDIANTE.
     """
-    if not obtener_usuario(id_usuario):
+    usuario = obtener_usuario(id_usuario)
+    if not usuario:
         return False, "Usuario no encontrado."
 
-    campos_permitidos = {"correo", "activo", "id_rol"}
+    campos_permitidos = {"username", "correo", "activo", "id_rol", "password"}
     campos, valores = [], []
+    
+    # Validar que username sea único si se intenta cambiar
+    if "username" in kwargs and kwargs["username"]:
+        nuevo_username = kwargs["username"].strip().lower()
+        # Buscar si el username ya existe (excepto el del usuario actual)
+        existente = ejecutar_query(
+            "SELECT id_usuario FROM usuario WHERE username = %s AND id_usuario != %s",
+            (nuevo_username, id_usuario), fetchone=True
+        )
+        if existente:
+            return False, f"El nombre de usuario '{nuevo_username}' ya está en uso."
+        kwargs["username"] = nuevo_username
+    
     for campo, valor in kwargs.items():
         if campo in campos_permitidos and valor is not None:
-            campos.append(f"{campo} = %s"); valores.append(valor)
+            # Convertir boolean a int para MySQL
+            if campo == "activo" and isinstance(valor, bool):
+                valor = 1 if valor else 0
+            # Hash password si se intenta cambiar (cambiar nombre de columna a password_hash)
+            if campo == "password" and valor:
+                campos.append("password_hash = %s")
+                valores.append(_hash_password(valor))
+            elif campo != "password":  # Solo agregar si NO es password vacío
+                campos.append(f"{campo} = %s")
+                valores.append(valor)
 
     if not campos:
         return False, "No se proporcionaron datos para actualizar."
@@ -262,7 +339,31 @@ def actualizar_usuario(id_usuario: int, **kwargs):
         f"UPDATE usuario SET {', '.join(campos)} WHERE id_usuario = %s",
         tuple(valores)
     )
+    
+    # Sincronizar correo con PERSONA y ESTUDIANTE
+    if "correo" in kwargs:
+        try:
+            # Actualizar en PERSONA
+            ejecutar_comando(
+                "UPDATE persona SET correo = %s WHERE id_persona = %s",
+                (kwargs["correo"], usuario["id_persona"])
+            )
+            # Actualizar en ESTUDIANTE
+            documento = ejecutar_query(
+                "SELECT documento_identidad FROM persona WHERE id_persona = %s",
+                (usuario["id_persona"],), fetchone=True
+            )
+            if documento:
+                ejecutar_comando(
+                    "UPDATE estudiante SET correo = %s WHERE documento_identidad = %s",
+                    (kwargs["correo"], documento["documento_identidad"])
+                )
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+    
     return True, "Usuario actualizado."
+
 
 
 def cambiar_password(id_usuario: int, password_actual: str, password_nueva: str):

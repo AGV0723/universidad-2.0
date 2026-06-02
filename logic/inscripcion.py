@@ -30,13 +30,15 @@ def obtener_inscripcion(id_inscripcion):
     )
 
 
-def listar_inscripciones(id_periodo=None, id_programa=None):
+def listar_inscripciones(id_periodo=None, id_programa=None, id_estudiante=None):
     condiciones = []
     params = []
     if id_periodo:
         condiciones.append("i.id_periodo = %s"); params.append(id_periodo)
     if id_programa:
         condiciones.append("i.id_programa = %s"); params.append(id_programa)
+    if id_estudiante:
+        condiciones.append("i.id_estudiante = %s"); params.append(id_estudiante)
 
     where = f"WHERE {' AND '.join(condiciones)}" if condiciones else ""
 

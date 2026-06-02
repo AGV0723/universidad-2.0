@@ -13,6 +13,11 @@ from logic.seguridad import (
 
 seguridad_bp = Blueprint("seguridad", __name__)
 
+# RUTA DE PRUEBA
+@seguridad_bp.route("/test", methods=["GET"])
+def test():
+    return jsonify({"mensaje": "Blueprint cargado correctamente"}), 200
+
 # ─────────────────────────────────────────────────────────────────────────────
 # AUTH
 # ─────────────────────────────────────────────────────────────────────────────
@@ -53,11 +58,25 @@ def post_logout():
     return redirect("/seguridad/login")
 
 @seguridad_bp.route("/sesion", methods=["GET"])
+@seguridad_bp.route("/sesion/", methods=["GET"])
 def get_sesion():
-    """Retorna información de la sesión actual."""
+    """Retorna información de la sesión actual con id_persona."""
+    from logic.seguridad import obtener_usuario
     u = usuario_activo()
     if not u:
         return jsonify({"error": "No hay sesión activa"}), 401
+    
+    # Obtener datos completos del usuario incluyendo id_persona
+    usuario_completo = obtener_usuario(u["id_usuario"])
+    if usuario_completo:
+        return jsonify({
+            "id_usuario": u["id_usuario"],
+            "username": u["username"],
+            "rol": u["rol"],
+            "id_rol": u["id_rol"],
+            "id_persona": usuario_completo["id_persona"]
+        }), 200
+    
     return jsonify(u), 200
 
 @seguridad_bp.route("/menus/mi-rol", methods=["GET"])
@@ -72,6 +91,7 @@ def get_menus_mi_rol():
 # ROLES (solo ADMINISTRADOR)
 # ─────────────────────────────────────────────────────────────────────────────
 
+@seguridad_bp.route("/roles/", methods=["GET"])
 @seguridad_bp.route("/roles", methods=["GET"])
 def get_roles():
     """Listar todos los roles."""
@@ -86,6 +106,7 @@ def get_rol(id_rol):
     return jsonify(r), 200
 
 @seguridad_bp.route("/roles", methods=["POST"])
+@seguridad_bp.route("/roles/", methods=["POST"])
 def post_rol():
     """Crear un rol."""
     d = request.json or {}
@@ -117,6 +138,7 @@ def delete_rol(id_rol):
 # USUARIOS
 # ─────────────────────────────────────────────────────────────────────────────
 
+@seguridad_bp.route("/usuarios/", methods=["GET"])
 @seguridad_bp.route("/usuarios", methods=["GET"])
 def get_usuarios():
     """Listar usuarios."""
@@ -131,6 +153,7 @@ def get_usuario(id_usuario):
     return jsonify(u), 200
 
 @seguridad_bp.route("/usuarios", methods=["POST"])
+@seguridad_bp.route("/usuarios/", methods=["POST"])
 def post_usuario():
     """Crear usuario."""
     d = request.json or {}
@@ -147,7 +170,7 @@ def post_usuario():
 def put_usuario(id_usuario):
     """Actualizar usuario."""
     d = request.json or {}
-    campos = {k: d[k] for k in ("correo", "activo", "id_rol") if k in d}
+    campos = {k: d[k] for k in ("username", "password", "correo", "activo", "id_rol") if k in d}
     exito, msg = actualizar_usuario(id_usuario, **campos)
     if not exito:
         return jsonify({"error": msg}), 400
@@ -191,6 +214,7 @@ def put_cambiar_mi_password():
 # PERSONAS
 # ─────────────────────────────────────────────────────────────────────────────
 
+@seguridad_bp.route("/personas/", methods=["GET"])
 @seguridad_bp.route("/personas", methods=["GET"])
 def get_personas():
     """Listar todas las personas."""
@@ -205,6 +229,7 @@ def get_persona(id_persona):
     return jsonify(p), 200
 
 @seguridad_bp.route("/personas", methods=["POST"])
+@seguridad_bp.route("/personas/", methods=["POST"])
 def post_persona():
     """Crear persona."""
     d = request.json or {}
@@ -248,6 +273,7 @@ def delete_persona(id_persona):
 # MENÚS (solo ADMINISTRADOR)
 # ─────────────────────────────────────────────────────────────────────────────
 
+@seguridad_bp.route("/menus/", methods=["GET"])
 @seguridad_bp.route("/menus", methods=["GET"])
 def get_menus():
     """Listar todos los menús."""

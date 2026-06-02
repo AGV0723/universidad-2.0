@@ -3,15 +3,15 @@ routes/estudiante.py - Rutas de Estudiantes
 """
 from flask import Blueprint, request, jsonify
 from logic.estudiante import (listar_estudiantes, obtener_estudiante, crear_estudiante,
-                               actualizar_estudiante, desactivar_estudiante, buscar_por_codigo)
+                               actualizar_estudiante, desactivar_estudiante, eliminar_estudiante, buscar_por_codigo)
 
 estudiante_bp = Blueprint("estudiante", __name__)
 
 @estudiante_bp.route("/", methods=["GET"])
 def get_estudiantes():
-    """Retorna lista de estudiantes desde BD."""
+    """Retorna lista de estudiantes desde BD (incluyendo inactivos)."""
     id_programa = request.args.get("id_programa", type=int)
-    return jsonify(listar_estudiantes(id_programa=id_programa)), 200
+    return jsonify(listar_estudiantes(solo_activos=False, id_programa=id_programa)), 200
 
 @estudiante_bp.route("/<int:id_estudiante>", methods=["GET"])
 def get_estudiante(id_estudiante):
@@ -31,25 +31,29 @@ def get_por_codigo(codigo):
 
 @estudiante_bp.route("/", methods=["POST"])
 def post_estudiante():
-    """Crea un estudiante en BD."""
+    """Crea un estudiante en BD y automáticamente crea PERSONA y USUARIO con rol ESTUDIANTE."""
     d = request.json or {}
     requeridos = ("codigo_estudiantil", "documento_identidad",
                   "primer_nombre", "apellido", "id_programa", "id_pensum")
     if not all(d.get(k) for k in requeridos):
         return jsonify({"error": f"Faltan campos requeridos: {', '.join(requeridos)}"}), 400
 
-    exito, resultado = crear_estudiante(
+    exito, resultado, *msg = crear_estudiante(
         d["codigo_estudiantil"], d["documento_identidad"],
         d["primer_nombre"], d["apellido"],
         d["id_programa"], d["id_pensum"],
         segundo_nombre=d.get("segundo_nombre"),
         segundo_apellido=d.get("segundo_apellido"),
         correo=d.get("correo"),
-        telefono=d.get("telefono")
+        telefono=d.get("telefono"),
+        username=d.get("username"),
+        password=d.get("password")
     )
     if not exito:
         return jsonify({"error": resultado}), 409
-    return jsonify({"mensaje": "Estudiante creado", "id_estudiante": resultado}), 201
+    
+    mensaje = msg[0] if msg else "Estudiante creado"
+    return jsonify({"mensaje": mensaje, "id_estudiante": resultado}), 201
 
 @estudiante_bp.route("/<int:id_estudiante>", methods=["PUT"])
 def put_estudiante(id_estudiante):
@@ -65,8 +69,8 @@ def put_estudiante(id_estudiante):
 
 @estudiante_bp.route("/<int:id_estudiante>", methods=["DELETE"])
 def delete_estudiante(id_estudiante):
-    """Elimina (desactiva) un estudiante en BD."""
-    exito, msg = desactivar_estudiante(id_estudiante)
+    """Elimina completamente un estudiante (incluyendo usuario y persona si existen)."""
+    exito, msg = eliminar_estudiante(id_estudiante)
     if not exito:
         return jsonify({"error": msg}), 400
     return jsonify({"mensaje": msg}), 200

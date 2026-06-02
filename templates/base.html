@@ -122,6 +122,15 @@
     </div>
   </div>
 
+  {% if session.get('usuario_rol') == 'ESTUDIANTE' %}
+  <!-- Menú para ESTUDIANTE: solo acceso al portal de pagos -->
+  <div class="nav-section">Mi Cuenta</div>
+  <a href="/paginas/portal-pagos" class="nav-link {% if '/portal-pagos' in request.path %}active{% endif %}">
+    <i class="bi bi-credit-card"></i> Mis Pagos
+  </a>
+
+  {% else %}
+  <!-- Menú para otros roles (ADMIN, SUPERVISOR, etc.) -->
   <div class="nav-section">Principal</div>
   <a href="/" class="nav-link {% if request.path=='/' %}active{% endif %}">
     <i class="bi bi-speedometer2"></i> Dashboard
@@ -165,6 +174,11 @@
   <a href="/paginas/roles" class="nav-link {% if '/roles' in request.path %}active{% endif %}">
     <i class="bi bi-shield-check"></i> Roles
   </a>
+  <a href="/paginas/auditoria" class="nav-link {% if '/auditoria' in request.path %}active{% endif %}">
+    <i class="bi bi-receipt"></i> Auditoría Pagos
+  </a>
+  {% endif %}
+
   {% endif %}
 
   <div class="logout-area">

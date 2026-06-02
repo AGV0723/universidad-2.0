@@ -1,5 +1,4 @@
- 
--- SISTEMA DE GESTIÓN DE MATRÍCULAS — Universidad Caribe
+ -- SISTEMA DE GESTIÓN DE MATRÍCULAS — Universidad Caribe
 -- DROP DATABASE uninorte;
 CREATE DATABASE uninorte;
 USE uninorte;
@@ -213,7 +212,7 @@ CREATE TABLE inscripcion (
   id_pensum INT NOT NULL,
   id_periodo INT NOT NULL,
 
-  UNIQUE (id_estudiante, id_periodo),
+  UNIQUE (id_estudiante, modalidad_cobro, id_periodo),
 
   FOREIGN KEY (id_estudiante)
     REFERENCES estudiante(id_estudiante)
@@ -325,8 +324,3 @@ CREATE TABLE cuenta_corriente (
     ON DELETE RESTRICT
     ON UPDATE CASCADE
 );
-
-
-
-
-

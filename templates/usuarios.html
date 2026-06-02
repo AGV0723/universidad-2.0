@@ -21,7 +21,7 @@ pagina de usuarios (solo admin)
     <div class="card">
       <div class="card-body p-0">
         <table class="table table-hover mb-0" id="tblUsr">
-          <thead class="table-dark"><tr><th>Username</th><th>Nombre</th><th>Correo</th><th>Rol</th><th>Estado</th><th>Acciones</th></tr></thead>
+          <thead class="table-dark text-white"><tr><th>Username</th><th>Nombre</th><th>Correo</th><th>Rol</th><th>Estado</th><th>Acciones</th></tr></thead>
           <tbody><tr><td colspan="6" class="text-center text-muted py-3">Cargando...</td></tr></tbody>
         </table>
       </div>
@@ -36,7 +36,7 @@ pagina de usuarios (solo admin)
     <div class="card">
       <div class="card-body p-0">
         <table class="table table-hover mb-0" id="tblPer">
-          <thead class="table-dark"><tr><th>Nombre</th><th>Documento</th><th>Correo</th><th>Teléfono</th><th>Acciones</th></tr></thead>
+          <thead class="table-dark text-white"><tr><th>Nombre</th><th>Documento</th><th>Correo</th><th>Teléfono</th><th>Acciones</th></tr></thead>
           <tbody><tr><td colspan="5" class="text-center text-muted py-3">Cargando...</td></tr></tbody>
         </table>
       </div>
@@ -190,11 +190,12 @@ async function guardarUsr(){
     const body={username:document.getElementById('uUsername').value,password:pass,correo:document.getElementById('uCorreo').value,id_persona:parseInt(document.getElementById('uPersona').value),id_rol:parseInt(document.getElementById('uRol').value)};
     try{await api('POST','/seguridad/usuarios/',body);showToast('Usuario creado');mUsr.hide();cargar();}catch(e){showToast(e.message,'danger');}
   } else {
-    const body={correo:document.getElementById('uCorreo').value,id_rol:parseInt(document.getElementById('uRol').value),activo:document.getElementById('uActivo').checked};
+    const body={username:document.getElementById('uUsername').value,correo:document.getElementById('uCorreo').value,id_rol:parseInt(document.getElementById('uRol').value),activo:document.getElementById('uActivo').checked};
     if(pass) body.password=pass;
     try{await api('PUT',`/seguridad/usuarios/${id}`,body);showToast('Usuario actualizado');mUsr.hide();cargar();}catch(e){showToast(e.message,'danger');}
   }
 }
+
 
 async function toggleUsr(id,actual){
   try{await api('PUT',`/seguridad/usuarios/${id}`,{activo:!actual});showToast('Estado actualizado');cargar();}catch(e){showToast(e.message,'danger');}
